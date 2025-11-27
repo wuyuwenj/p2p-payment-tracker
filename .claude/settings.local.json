@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del \"C:\\Users\\chine\\Desktop\\insurance-payment-tracker\\lib\\auth.ts\")",
+      "Bash(npx prisma db push)",
+      "Bash(copy .env.local .env)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run build:*)",
+      "Bash(git remote add:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd insurance payment tracker with authentication and tracking status\n\n- Implement NextAuth v5 with Google OAuth and Prisma adapter\n- Add PostgreSQL database with Prisma ORM (Supabase)\n- Create Insurance Payments page with Excel import and manual entry\n- Create Venmo Payments page for patient payment tracking\n- Create All Patients page with balance overview and filtering\n- Add patient detail pages with expandable payment history\n- Implement tracking status feature (Pending, Recorded, Notified, Collected)\n- Add user authentication with session management\n- Create API routes for all CRUD operations with user isolation\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
