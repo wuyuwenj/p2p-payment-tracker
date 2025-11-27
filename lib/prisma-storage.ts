@@ -31,6 +31,7 @@ export const prismaStorage = {
         checkEFTAmount: p.checkEFTAmount.toNumber(),
         payeeName: p.payeeName,
         payeeAddress: p.payeeAddress || '',
+        trackingStatus: p.trackingStatus,
       }))
     } catch (error) {
       console.error('Error fetching insurance payments from Prisma:', error)
@@ -49,11 +50,14 @@ export const prismaStorage = {
       throw new Error('userId is required when using database storage')
     }
 
+    // Type assertion to ensure TypeScript knows userId is a string here
+    const userIdString = userId as string
+
     try {
       await prisma.insurancePayment.createMany({
         data: payments.map(p => ({
           id: p.id,
-          userId,
+          userId: userIdString,
           claimStatus: p.claimStatus,
           datesOfService: p.datesOfService,
           memberSubscriberID: p.memberSubscriberID,
@@ -149,11 +153,14 @@ export const prismaStorage = {
       throw new Error('userId is required when using database storage')
     }
 
+    // Type assertion to ensure TypeScript knows userId is a string here
+    const userIdString = userId as string
+
     try {
       await prisma.venmoPayment.createMany({
         data: payments.map(p => ({
           id: p.id,
-          userId,
+          userId: userIdString,
           patientName: p.patientName,
           memberSubscriberID: p.memberSubscriberID,
           amount: p.amount,

@@ -52,10 +52,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get userId and ensure it's a string
+    const userId = session.user.id as string
+
     // Transform and create payments
     const created = await prisma.venmoPayment.createMany({
       data: payments.map((p: any) => ({
-        userId: session.user!.id,
+        userId,
         patientName: p.patientName,
         memberSubscriberID: p.memberSubscriberID,
         amount: p.amount,

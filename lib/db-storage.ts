@@ -31,6 +31,7 @@ export const dbStorage = {
         checkEFTAmount: parseFloat(row.check_eft_amount) || 0,
         payeeName: row.payee_name || '',
         payeeAddress: row.payee_address || '',
+        trackingStatus: row.tracking_status || 'PENDING',
       }))
     } catch (error) {
       console.error('Error fetching insurance payments:', error)

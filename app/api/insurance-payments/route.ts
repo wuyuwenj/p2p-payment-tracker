@@ -57,9 +57,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get userId and ensure it's a string
+    const userId = session.user.id as string
+
     // Transform and create payments
     const dataToInsert = payments.map((p: any) => ({
-      userId: session.user!.id,
+      userId,
       claimStatus: p.claimStatus || null,
       datesOfService: p.datesOfService || null,
       memberSubscriberID: p.memberSubscriberID || "",
