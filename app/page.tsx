@@ -110,7 +110,7 @@ export default function InsurancePaymentsPage() {
           paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate']),
           checkNumber: getColumnValue(row, ['Check/EFT number', 'Check/EFT Number', 'Chumber', 'Check Number', 'Check number', 'CheckNumber', 'Check #', 'Check#', 'EFT Number']),
           checkEFTAmount: parseFloat(getColumnValue(row, ['Check/EFT amount', 'Check/EFT Amount', 'CheckEFTAmount', 'Amount', 'Payment Amount'])) || 0,
-          payeeName: getColumnValue(row, ['Payee name', 'Payee Name', 'PayeeName', 'Patient Name', 'Patient', 'Name']),
+          payeeName: getColumnValue(row, ['Member Name', 'Member name', 'MemberName', 'Patient Name', 'Patient name', 'PatientName', 'Patient']),
           payeeAddress: getColumnValue(row, ['Payee address', 'Payee Address', 'PayeeAddress', 'Address']),
         }));
 
