@@ -20,7 +20,7 @@ export async function GET() {
       }),
     ])
 
-    // Group by patient (memberID + name)
+    // Group by patient using memberSubscriberID only (name formats may differ between sources)
     const patientMap = new Map<
       string,
       {
@@ -33,10 +33,9 @@ export async function GET() {
       }
     >()
 
-    // Process insurance payments
+    // Process insurance payments first (these typically have the canonical name format)
     insurancePayments.forEach((payment) => {
-      const key =
-        `${payment.memberSubscriberID}|||${payment.payeeName}`.toLowerCase()
+      const key = payment.memberSubscriberID.toLowerCase()
       if (!patientMap.has(key)) {
         patientMap.set(key, {
           memberID: payment.memberSubscriberID,
@@ -52,10 +51,9 @@ export async function GET() {
       patient.insuranceCount++
     })
 
-    // Process Venmo payments
+    // Process Venmo payments (link to existing patient by memberID, or create new if not found)
     venmoPayments.forEach((payment) => {
-      const key =
-        `${payment.memberSubscriberID}|||${payment.patientName}`.toLowerCase()
+      const key = payment.memberSubscriberID.toLowerCase()
       if (!patientMap.has(key)) {
         patientMap.set(key, {
           memberID: payment.memberSubscriberID,

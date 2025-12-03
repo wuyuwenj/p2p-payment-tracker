@@ -14,34 +14,31 @@ export async function GET(
     }
 
     const { id } = await params
-    // Decode the patient ID (format: memberID|||patientName)
+    // Decode the patient ID (format: memberID|||patientName or just memberID for backwards compat)
     const decoded = decodeURIComponent(id)
     const separatorIndex = decoded.indexOf("|||")
 
-    if (separatorIndex === -1) {
+    // Support both old format (memberID|||name) and new format (just memberID)
+    const memberID = separatorIndex === -1
+      ? decoded
+      : decoded.substring(0, separatorIndex)
+    const patientNameFromUrl = separatorIndex === -1
+      ? null
+      : decoded.substring(separatorIndex + 3)
+
+    if (!memberID) {
       return NextResponse.json(
-        { error: "Invalid patient ID format" },
+        { error: "Member ID is required" },
         { status: 400 }
       )
     }
 
-    const memberID = decoded.substring(0, separatorIndex)
-    const patientName = decoded.substring(separatorIndex + 3)
-
-    if (!patientName) {
-      return NextResponse.json(
-        { error: "Patient name is required" },
-        { status: 400 }
-      )
-    }
-
-    // Fetch payments for this patient
+    // Fetch payments for this patient by memberID only (name formats may differ)
     const [insurancePayments, venmoPayments] = await Promise.all([
       prisma.insurancePayment.findMany({
         where: {
           userId: session.user.id,
           memberSubscriberID: { equals: memberID, mode: "insensitive" },
-          payeeName: { equals: patientName, mode: "insensitive" },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -49,11 +46,16 @@ export async function GET(
         where: {
           userId: session.user.id,
           memberSubscriberID: { equals: memberID, mode: "insensitive" },
-          patientName: { equals: patientName, mode: "insensitive" },
         },
         orderBy: { createdAt: "desc" },
       }),
     ])
+
+    // Determine the display name (prefer insurance payment name, fall back to venmo, then URL)
+    const patientName = insurancePayments[0]?.payeeName
+      || venmoPayments[0]?.patientName
+      || patientNameFromUrl
+      || "Unknown"
 
     // Transform to frontend format
     const transformedInsurance = insurancePayments.map((p) => ({
