@@ -337,36 +337,36 @@ export default function InsurancePaymentsPage() {
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Claim Status:</span>
-              <span className="text-gray-600 ml-1">Claim status, Claim Status</span>
+              <span className="font-medium">Patient/Member Name:</span>
+              <span className="text-gray-600 ml-1">Member Name, Patient Name, Patient</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Service Dates:</span>
-              <span className="text-gray-600 ml-1">Dates of service, Service Date</span>
+              <span className="font-medium">Amount (Priority):</span>
+              <span className="text-gray-600 ml-1">Claim amount paid, Check/EFT amount, Amount</span>
             </div>
             <div className="bg-white p-2 rounded">
               <span className="font-medium">Member ID:</span>
-              <span className="text-gray-600 ml-1">Subscriber ID, Member ID, Member Subscriber ID</span>
+              <span className="text-gray-600 ml-1">Member Subscriber ID, Member ID, Subscriber ID</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Provider:</span>
-              <span className="text-gray-600 ml-1">Provider name, Provider</span>
+              <span className="font-medium">Check Number:</span>
+              <span className="text-gray-600 ml-1">Check/EFT number, Check Number, Check #, EFT Number</span>
             </div>
             <div className="bg-white p-2 rounded">
               <span className="font-medium">Payment Date:</span>
               <span className="text-gray-600 ml-1">Payment date, Payment Date</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Check Number:</span>
-              <span className="text-gray-600 ml-1">Check/EFT number, Check Number, Check #</span>
+              <span className="font-medium">Claim Status:</span>
+              <span className="text-gray-600 ml-1">Claim status, Claim Status</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Amount:</span>
-              <span className="text-gray-600 ml-1">Check/EFT amount, Amount, Payment Amount</span>
+              <span className="font-medium">Service Dates:</span>
+              <span className="text-gray-600 ml-1">Dates of service, Service Date, Service Dates</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Payee Name:</span>
-              <span className="text-gray-600 ml-1">Payee name, Patient Name, Name</span>
+              <span className="font-medium">Provider:</span>
+              <span className="text-gray-600 ml-1">Provider name, Provider</span>
             </div>
             <div className="bg-white p-2 rounded col-span-2">
               <span className="font-medium">Payee Address:</span>
