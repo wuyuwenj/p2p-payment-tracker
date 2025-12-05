@@ -23,6 +23,7 @@ export async function GET() {
       memberSubscriberID: p.memberSubscriberID,
       providerName: p.providerName || "",
       paymentDate: p.paymentDate || "",
+      claimNumber: p.claimNumber || "",
       checkNumber: p.checkNumber || "",
       checkEFTAmount: Number(p.checkEFTAmount),
       payeeName: p.payeeName,
@@ -60,28 +61,55 @@ export async function POST(request: NextRequest) {
     // Get userId and ensure it's a string
     const userId = session.user.id as string
 
-    // Transform and create payments
-    const dataToInsert = payments.map((p: any) => ({
-      userId,
-      claimStatus: p.claimStatus || null,
-      datesOfService: p.datesOfService || null,
-      memberSubscriberID: p.memberSubscriberID || "",
-      providerName: p.providerName || null,
-      paymentDate: p.paymentDate || null,
-      checkNumber: p.checkNumber || null,
-      checkEFTAmount: p.checkEFTAmount || 0,
-      payeeName: p.payeeName || "Unknown",
-      payeeAddress: p.payeeAddress || null,
-    }))
+    // Upsert payments based on memberSubscriberID + datesOfService
+    let createdCount = 0
+    let updatedCount = 0
 
-    console.log("Inserting payments:", dataToInsert.length)
-    console.log("First record:", dataToInsert[0])
+    for (const p of payments) {
+      const paymentData = {
+        userId,
+        claimStatus: p.claimStatus || null,
+        datesOfService: p.datesOfService || null,
+        memberSubscriberID: p.memberSubscriberID || "",
+        providerName: p.providerName || null,
+        paymentDate: p.paymentDate || null,
+        claimNumber: p.claimNumber || null,
+        checkNumber: p.checkNumber || null,
+        checkEFTAmount: p.checkEFTAmount || 0,
+        payeeName: p.payeeName || "Unknown",
+        payeeAddress: p.payeeAddress || null,
+      }
 
-    const created = await prisma.insurancePayment.createMany({
-      data: dataToInsert,
+      // Try to find existing record by memberSubscriberID + datesOfService
+      const existing = await prisma.insurancePayment.findFirst({
+        where: {
+          userId,
+          memberSubscriberID: paymentData.memberSubscriberID,
+          datesOfService: paymentData.datesOfService,
+        },
+      })
+
+      if (existing) {
+        // Update existing record
+        await prisma.insurancePayment.update({
+          where: { id: existing.id },
+          data: paymentData,
+        })
+        updatedCount++
+      } else {
+        // Create new record
+        await prisma.insurancePayment.create({
+          data: paymentData,
+        })
+        createdCount++
+      }
+    }
+
+    return NextResponse.json({
+      created: createdCount,
+      updated: updatedCount,
+      total: createdCount + updatedCount
     })
-
-    return NextResponse.json({ count: created.count })
   } catch (error) {
     console.error("Error creating insurance payments:", error)
     return NextResponse.json(

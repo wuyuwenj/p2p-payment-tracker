@@ -69,6 +69,7 @@ export async function GET(
       checkEFTAmount: Number(p.checkEFTAmount),
       payeeName: p.payeeName,
       payeeAddress: p.payeeAddress || "",
+      trackingStatus: p.trackingStatus,
     }))
 
     const transformedVenmo = venmoPayments.map((p) => ({

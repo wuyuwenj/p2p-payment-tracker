@@ -7,6 +7,7 @@ export interface InsurancePayment {
   memberSubscriberID: string;
   providerName: string;
   paymentDate: string;
+  claimNumber: string;
   checkNumber: string;
   checkEFTAmount: number;
   payeeName: string;

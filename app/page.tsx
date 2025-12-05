@@ -1,15 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import * as XLSX from 'xlsx';
+import { Upload, Trash2, HelpCircle, X, ChevronDown, Plus, Search } from 'lucide-react';
+import { Button } from '@/components/tracker/Button';
+import { Input } from '@/components/tracker/Input';
+import { Badge } from '@/components/tracker/Badge';
+import { Card } from '@/components/tracker/Card';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { InsurancePayment, TrackingStatus } from '@/lib/types';
+import { toast } from '@/hooks/use-toast';
 
-const TRACKING_STATUSES: { value: TrackingStatus; label: string; color: string }[] = [
-  { value: 'PENDING', label: 'Pending', color: 'bg-gray-100 text-gray-800' },
-  { value: 'RECORDED', label: 'Recorded', color: 'bg-blue-100 text-blue-800' },
-  { value: 'NOTIFIED', label: 'Notified', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'COLLECTED', label: 'Collected', color: 'bg-green-100 text-green-800' },
+type StatusVariant = 'secondary' | 'info' | 'warning' | 'success';
+
+const TRACKING_STATUSES: { value: TrackingStatus; label: string; variant: StatusVariant }[] = [
+  { value: 'PENDING', label: 'Pending', variant: 'secondary' },
+  { value: 'RECORDED', label: 'Recorded', variant: 'info' },
+  { value: 'NOTIFIED', label: 'Notified', variant: 'warning' },
+  { value: 'COLLECTED', label: 'Collected', variant: 'success' },
 ];
 
 interface ManualPaymentForm {
@@ -18,10 +27,12 @@ interface ManualPaymentForm {
   memberSubscriberID: string;
   providerName: string;
   paymentDate: string;
+  claimNumber: string;
   checkNumber: string;
   checkEFTAmount: string;
   payeeName: string;
   payeeAddress: string;
+  trackingStatus: TrackingStatus;
 }
 
 const emptyPaymentForm: ManualPaymentForm = {
@@ -30,19 +41,35 @@ const emptyPaymentForm: ManualPaymentForm = {
   memberSubscriberID: '',
   providerName: '',
   paymentDate: '',
+  claimNumber: '',
   checkNumber: '',
   checkEFTAmount: '',
   payeeName: '',
   payeeAddress: '',
+  trackingStatus: 'PENDING',
 };
+
+interface PatientSuggestion {
+  name: string;
+  memberId: string;
+}
 
 export default function InsurancePaymentsPage() {
   const { data: session, status } = useSession();
   const [payments, setPayments] = useState<InsurancePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportHelp, setShowImportHelp] = useState(false);
-  const [showManualForm, setShowManualForm] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(true);
   const [manualPayments, setManualPayments] = useState<ManualPaymentForm[]>([{ ...emptyPaymentForm }]);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Autocomplete state for manual form
+  const [suggestions, setSuggestions] = useState<PatientSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [allPatients, setAllPatients] = useState<PatientSuggestion[]>([]);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -58,12 +85,50 @@ export default function InsurancePaymentsPage() {
       if (response.ok) {
         const data = await response.json();
         setPayments(data);
+
+        // Build unique patient list for autocomplete
+        const uniquePatients = new Map<string, PatientSuggestion>();
+        data.forEach((payment: InsurancePayment) => {
+          const key = `${payment.memberSubscriberID}|||${payment.payeeName}`.toLowerCase();
+          if (!uniquePatients.has(key) && payment.payeeName && payment.memberSubscriberID) {
+            uniquePatients.set(key, {
+              name: payment.payeeName,
+              memberId: payment.memberSubscriberID,
+            });
+          }
+        });
+        setAllPatients(Array.from(uniquePatients.values()));
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
+      toast({ title: 'Error loading payments', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePayeeNameChange = (index: number, value: string) => {
+    updateManualPayment(index, 'payeeName', value);
+    setActiveRowIndex(index);
+
+    if (value.trim().length >= 1) {
+      const filtered = allPatients.filter(patient =>
+        patient.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  };
+
+  const selectPatient = (index: number, patient: PatientSuggestion) => {
+    updateManualPayment(index, 'payeeName', patient.name);
+    updateManualPayment(index, 'memberSubscriberID', patient.memberId);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setActiveRowIndex(null);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,19 +144,16 @@ export default function InsurancePaymentsPage() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        // Log the first row's column names for debugging
         if (jsonData.length > 0) {
           console.log('Excel columns found:', Object.keys(jsonData[0] as object));
         }
 
-        // Helper to find column value with flexible matching
         const getColumnValue = (row: any, possibleNames: string[]): string => {
           for (const name of possibleNames) {
             if (row[name] !== undefined && row[name] !== null) {
               return String(row[name]);
             }
           }
-          // Also try case-insensitive match
           const rowKeys = Object.keys(row);
           for (const name of possibleNames) {
             const found = rowKeys.find(k => k.toLowerCase() === name.toLowerCase());
@@ -108,18 +170,17 @@ export default function InsurancePaymentsPage() {
           memberSubscriberID: getColumnValue(row, ['Member nbscriber ID', 'Member Subscriber ID', 'Member subscriber ID', 'MemberSubscriberID', 'Member ID', 'MemberID', 'Subscriber ID']),
           providerName: getColumnValue(row, ['Provider name', 'Provider Name', 'ProviderName', 'Provider']),
           paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate']),
+          claimNumber: getColumnValue(row, ['Claim number', 'Claim Number', 'ClaimNumber', 'Claim #', 'Claim#']),
           checkNumber: getColumnValue(row, ['Check/EFT number', 'Check/EFT Number', 'Chumber', 'Check Number', 'Check number', 'CheckNumber', 'Check #', 'Check#', 'EFT Number']),
           checkEFTAmount: parseFloat(getColumnValue(row, ['Claim amount paid', 'Claim Amount Paid', 'ClaimAmountPaid', 'Check/EFT amount', 'Check/EFT Amount', 'CheckEFTAmount', 'Amount', 'Payment Amount'])) || 0,
           payeeName: getColumnValue(row, ['Member Name', 'Member name', 'MemberName', 'Patient Name', 'Patient name', 'PatientName', 'Patient']),
           payeeAddress: getColumnValue(row, ['Payee address', 'Payee Address', 'PayeeAddress', 'Address']),
         }));
 
-        // Log first payment for debugging
         if (newPayments.length > 0) {
           console.log('First payment to import:', newPayments[0]);
         }
 
-        // Send to API
         const response = await fetch('/api/insurance-payments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -128,21 +189,19 @@ export default function InsurancePaymentsPage() {
 
         if (response.ok) {
           const result = await response.json();
-          alert(`Successfully imported ${result.count} payment records`);
+          toast({ title: `Successfully imported ${result.count} payment records` });
           fetchPayments();
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error('API error:', response.status, errorData);
-          alert(`Error importing payments: ${errorData.error || response.statusText}`);
+          toast({ title: `Error importing payments: ${errorData.error || response.statusText}`, variant: 'destructive' });
         }
       } catch (error) {
         console.error('Error parsing Excel file:', error);
-        alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast({ title: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
       }
     };
     reader.readAsBinaryString(file);
-
-    // Reset input
     e.target.value = '';
   };
 
@@ -153,31 +212,33 @@ export default function InsurancePaymentsPage() {
           method: 'DELETE',
         });
         if (response.ok) {
+          toast({ title: 'Payment deleted' });
           fetchPayments();
         } else {
-          alert('Error deleting payment');
+          toast({ title: 'Error deleting payment', variant: 'destructive' });
         }
       } catch (error) {
         console.error('Error deleting payment:', error);
-        alert('Error deleting payment');
+        toast({ title: 'Error deleting payment', variant: 'destructive' });
       }
     }
   };
 
   const handleClearAll = async () => {
-    if (confirm('Are you sure you want to delete ALL insurance payment records?')) {
+    if (confirm('Are you sure you want to delete ALL insurance payment records? This cannot be undone.')) {
       try {
         const response = await fetch('/api/insurance-payments', {
           method: 'DELETE',
         });
         if (response.ok) {
           setPayments([]);
+          toast({ title: 'All payments cleared' });
         } else {
-          alert('Error clearing payments');
+          toast({ title: 'Error clearing payments', variant: 'destructive' });
         }
       } catch (error) {
         console.error('Error clearing payments:', error);
-        alert('Error clearing payments');
+        toast({ title: 'Error clearing payments', variant: 'destructive' });
       }
     }
   };
@@ -191,16 +252,15 @@ export default function InsurancePaymentsPage() {
       });
 
       if (response.ok) {
-        // Update local state
         setPayments(payments.map(p =>
           p.id === paymentId ? { ...p, trackingStatus: newStatus } : p
         ));
       } else {
-        alert('Error updating status');
+        toast({ title: 'Error updating status', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Error updating status');
+      toast({ title: 'Error updating status', variant: 'destructive' });
     }
   };
 
@@ -208,27 +268,26 @@ export default function InsurancePaymentsPage() {
     return TRACKING_STATUSES.find(s => s.value === status) || TRACKING_STATUSES[0];
   };
 
-  // Manual payment form handlers
   const addManualPaymentRow = () => {
     setManualPayments([...manualPayments, { ...emptyPaymentForm }]);
   };
 
   const removeManualPaymentRow = (index: number) => {
-    setManualPayments(manualPayments.filter((_, i) => i !== index));
+    if (manualPayments.length > 1) {
+      setManualPayments(manualPayments.filter((_, i) => i !== index));
+    }
   };
 
   const updateManualPayment = (index: number, field: keyof ManualPaymentForm, value: string) => {
     const updated = [...manualPayments];
-    updated[index][field] = value;
+    updated[index][field] = value as any;
     setManualPayments(updated);
   };
 
-  const handleManualSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validPayments = manualPayments.filter(p => p.payeeName && p.checkEFTAmount);
+  const handleManualSubmit = async () => {
+    const validPayments = manualPayments.filter(p => p.payeeName && p.memberSubscriberID && p.checkEFTAmount);
     if (validPayments.length === 0) {
-      alert('Please add at least one payment with Payee Name and Amount');
+      toast({ title: 'Please add at least one payment with Payee Name, Member ID, and Amount', variant: 'destructive' });
       return;
     }
 
@@ -238,6 +297,7 @@ export default function InsurancePaymentsPage() {
       memberSubscriberID: p.memberSubscriberID,
       providerName: p.providerName,
       paymentDate: p.paymentDate,
+      claimNumber: p.claimNumber,
       checkNumber: p.checkNumber,
       checkEFTAmount: parseFloat(p.checkEFTAmount) || 0,
       payeeName: p.payeeName,
@@ -253,22 +313,29 @@ export default function InsurancePaymentsPage() {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Successfully added ${result.count} payment(s)`);
+        toast({ title: `Successfully added ${result.count} payment(s)` });
         fetchPayments();
         setManualPayments([{ ...emptyPaymentForm }]);
         setShowManualForm(false);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        alert(`Error adding payments: ${errorData.error || 'Unknown error'}`);
+        toast({ title: `Error adding payments: ${errorData.error || 'Unknown error'}`, variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error adding payments:', error);
-      alert('Error adding payments');
+      toast({ title: 'Error adding payments', variant: 'destructive' });
     }
   };
 
   if (status === 'loading' || loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (status === 'unauthenticated') {
@@ -280,19 +347,39 @@ export default function InsurancePaymentsPage() {
     );
   }
 
+  const filteredPayments = payments.filter(p => {
+    // Filter by status
+    if (statusFilter !== 'all' && p.trackingStatus !== statusFilter) {
+      return false;
+    }
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return (
+        p.payeeName?.toLowerCase().includes(query) ||
+        p.memberSubscriberID?.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
+
+  const total = filteredPayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Insurance Payment Records</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowManualForm(!showManualForm)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            {showManualForm ? 'Cancel' : 'Add Manual'}
-          </button>
-          <div className="relative">
-            <label className="bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors inline-block">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Insurance Payments</h1>
+            <p className="text-muted-foreground mt-1">Track and manage insurance payment records</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowImportHelp(!showImportHelp)}>
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Help
+            </Button>
+            <label className="cursor-pointer inline-flex items-center justify-center font-medium rounded-lg transition-colors bg-transparent text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm">
+              <Upload className="w-4 h-4 mr-2" />
               Import Excel
               <input
                 type="file"
@@ -301,35 +388,51 @@ export default function InsurancePaymentsPage() {
                 className="hidden"
               />
             </label>
-            <button
-              onClick={() => setShowImportHelp(!showImportHelp)}
-              className="ml-1 text-blue-600 hover:text-blue-800 text-sm"
-              title="Show import help"
-            >
-              ?
-            </button>
-          </div>
-          {payments.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-            >
+            <Button variant="destructive" size="sm" onClick={handleClearAll}>
+              <Trash2 className="w-4 h-4 mr-2" />
               Clear All
-            </button>
-          )}
+            </Button>
+          </div>
         </div>
-      </div>
+
+        <div className="mb-4 flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by patient name or member ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="RECORDED">Recorded</SelectItem>
+                <SelectItem value="NOTIFIED">Notified</SelectItem>
+                <SelectItem value="COLLECTED">Collected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
       {/* Import Help Panel */}
       {showImportHelp && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex justify-between items-start mb-2">
+        <Card className="p-6 mb-6 animate-fade-in bg-blue-50 border-blue-200">
+          <div className="flex justify-between items-start mb-4">
             <h3 className="font-semibold text-blue-800">Excel Import Guide</h3>
             <button
               onClick={() => setShowImportHelp(false)}
               className="text-blue-600 hover:text-blue-800"
             >
-              &times;
+              <X className="w-5 h-5" />
             </button>
           </div>
           <p className="text-sm text-blue-700 mb-3">
@@ -361,14 +464,18 @@ export default function InsurancePaymentsPage() {
               <span className="text-gray-600 ml-1">Claim status, Claim Status</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Service Dates:</span>
-              <span className="text-gray-600 ml-1">Dates of service, Service Date, Service Dates</span>
+              <span className="font-medium">Amount:</span>
+              <span className="text-gray-600 ml-1">Check/EFT amount, Amount, Payment Amount</span>
             </div>
             <div className="bg-white p-2 rounded">
-              <span className="font-medium">Provider:</span>
-              <span className="text-gray-600 ml-1">Provider name, Provider</span>
+              <span className="font-medium">Payee Name:</span>
+              <span className="text-gray-600 ml-1">Payee name, Patient Name, Name</span>
             </div>
-            <div className="bg-white p-2 rounded col-span-2">
+            <div className="bg-white p-2 rounded">
+              <span className="font-medium">Claim Number:</span>
+              <span className="text-gray-600 ml-1">Claim number, Claim Number, Claim #</span>
+            </div>
+            <div className="bg-white p-2 rounded">
               <span className="font-medium">Payee Address:</span>
               <span className="text-gray-600 ml-1">Payee address, Address</span>
             </div>
@@ -376,234 +483,256 @@ export default function InsurancePaymentsPage() {
           <p className="text-xs text-blue-600 mt-3">
             Tip: Column matching is case-insensitive. Check your browser console (F12) to see detected columns.
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Manual Payment Form */}
-      {showManualForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add Insurance Payment(s) Manually</h2>
-          <form onSubmit={handleManualSubmit}>
-            <div className="space-y-4">
-              {manualPayments.map((payment, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-medium text-gray-700">Payment #{index + 1}</span>
-                    {manualPayments.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeManualPaymentRow(index)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
+      <Card className="p-6 mb-6 animate-fade-in">
+        <h3 className="font-medium text-gray-900 mb-4">Add Manual Payment</h3>
+        <div className="space-y-4">
+          {manualPayments.map((row, index) => (
+            <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {/* Payee Name and Member ID Row */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payee Name *
+                  </label>
+                  <Input
+                    ref={index === activeRowIndex ? inputRef : undefined}
+                    type="text"
+                    value={row.payeeName}
+                    onChange={(e) => handlePayeeNameChange(index, e.target.value)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onFocus={() => {
+                      setActiveRowIndex(index);
+                      if (row.payeeName.length >= 1) {
+                        handlePayeeNameChange(index, row.payeeName);
+                      }
+                    }}
+                    placeholder="Start typing to search..."
+                  />
+                  {showSuggestions && activeRowIndex === index && suggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {suggestions.map((patient, pIndex) => (
+                        <div
+                          key={pIndex}
+                          onClick={() => selectPatient(index, patient)}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-900">{patient.name}</div>
+                          <div className="text-xs text-gray-500">Member ID: {patient.memberId}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showSuggestions && activeRowIndex === index && suggestions.length === 0 && row.payeeName.length >= 1 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No matching patients found
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Member ID *
+                  </label>
+                  <Input
+                    type="text"
+                    value={row.memberSubscriberID}
+                    onChange={(e) => updateManualPayment(index, 'memberSubscriberID', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Show other fields only after payee name is entered */}
+              {row.payeeName.trim().length > 0 && (
+                <>
+                  <div className="grid grid-cols-7 gap-3 items-end">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Payee Name *</label>
-                      <input
-                        type="text"
-                        value={payment.payeeName}
-                        onChange={(e) => updateManualPayment(index, 'payeeName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Patient name"
-                        required
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Claim #
+                      </label>
+                      <Input
+                        placeholder="Optional"
+                        value={row.claimNumber}
+                        onChange={(e) => updateManualPayment(index, 'claimNumber', e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Member/Subscriber ID</label>
-                      <input
-                        type="text"
-                        value={payment.memberSubscriberID}
-                        onChange={(e) => updateManualPayment(index, 'memberSubscriberID', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Member ID"
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Check #
+                      </label>
+                      <Input
+                        placeholder="Optional"
+                        value={row.checkNumber}
+                        onChange={(e) => updateManualPayment(index, 'checkNumber', e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Amount *</label>
-                      <input
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Amount *
+                      </label>
+                      <Input
                         type="number"
                         step="0.01"
-                        value={payment.checkEFTAmount}
-                        onChange={(e) => updateManualPayment(index, 'checkEFTAmount', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0.00"
-                        required
+                        value={row.checkEFTAmount}
+                        onChange={(e) => updateManualPayment(index, 'checkEFTAmount', e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Payment Date</label>
-                      <input
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Service Date
+                      </label>
+                      <Input
                         type="date"
-                        value={payment.paymentDate}
-                        onChange={(e) => updateManualPayment(index, 'paymentDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Check/EFT Number</label>
-                      <input
-                        type="text"
-                        value={payment.checkNumber}
-                        onChange={(e) => updateManualPayment(index, 'checkNumber', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Check number"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Claim Status</label>
-                      <input
-                        type="text"
-                        value={payment.claimStatus}
-                        onChange={(e) => updateManualPayment(index, 'claimStatus', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., Paid, Pending"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Dates of Service</label>
-                      <input
-                        type="text"
-                        value={payment.datesOfService}
+                        value={row.datesOfService}
                         onChange={(e) => updateManualPayment(index, 'datesOfService', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Service dates"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Provider Name</label>
-                      <input
-                        type="text"
-                        value={payment.providerName}
-                        onChange={(e) => updateManualPayment(index, 'providerName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Provider"
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Payment Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={row.paymentDate}
+                        onChange={(e) => updateManualPayment(index, 'paymentDate', e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Payee Address</label>
-                      <input
-                        type="text"
-                        value={payment.payeeAddress}
-                        onChange={(e) => updateManualPayment(index, 'payeeAddress', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Address"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center mt-4">
-              <button
-                type="button"
-                onClick={addManualPaymentRow}
-                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-              >
-                + Add Another Payment
-              </button>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowManualForm(false);
-                    setManualPayments([{ ...emptyPaymentForm }]);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-                >
-                  Save Payment(s)
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {payments.length === 0 && !showManualForm ? (
-        <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-          <p className="text-gray-600 text-lg mb-4">No insurance payment records yet</p>
-          <p className="text-gray-500">Upload an Excel file or add payments manually to get started</p>
-        </div>
-      ) : payments.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claim Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Dates</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check #</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payee Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payee Address</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {payments.map((payment) => {
-                  const statusConfig = getStatusConfig(payment.trackingStatus);
-                  return (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        <select
-                          value={payment.trackingStatus}
-                          onChange={(e) => handleStatusChange(payment.id, e.target.value as TrackingStatus)}
-                          className={`px-2 py-1 text-xs font-semibold rounded-full border-0 cursor-pointer ${statusConfig.color}`}
-                        >
-                          {TRACKING_STATUSES.map(status => (
-                            <option key={status.value} value={status.value}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <Select
+                        value={row.trackingStatus}
+                        onValueChange={(value) => updateManualPayment(index, 'trackingStatus', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {TRACKING_STATUSES.map((status) => (
+                            <SelectItem key={status.value} value={status.value}>
                               {status.label}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.claimStatus || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.datesOfService || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">{payment.memberSubscriberID || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.providerName || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.paymentDate || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.checkNumber || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold">${payment.checkEFTAmount.toFixed(2)}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">{payment.payeeName}</td>
-                      <td className="px-4 py-4 text-sm">{payment.payeeAddress || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => handleDelete(payment.id)}
-                          className="text-red-600 hover:text-red-900"
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {manualPayments.length > 1 && (
+                      <div className="flex items-center justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeManualPaymentRow(index)}
                         >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
-            <p className="text-sm text-gray-700">
-              Total Records: <span className="font-semibold">{payments.length}</span>
-              {' | '}
-              Total Amount: <span className="font-semibold">
-                ${payments.reduce((sum, p) => sum + p.checkEFTAmount, 0).toFixed(2)}
-              </span>
-            </p>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 mt-4">
+          <Button variant="ghost" size="sm" onClick={addManualPaymentRow}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Row
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleManualSubmit}>
+            Save All
+          </Button>
+        </div>
+      </Card>
+
+      {/* Payments Table */}
+      <Card className="animate-fade-in overflow-visible">
+        <div className="overflow-x-auto overflow-y-visible">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payee Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claim #</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check #</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredPayments.map((payment) => {
+                const statusConfig = getStatusConfig(payment.trackingStatus);
+
+                return (
+                  <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <Select
+                        value={payment.trackingStatus}
+                        onValueChange={(value) => handleStatusChange(payment.id, value as TrackingStatus)}
+                      >
+                        <SelectTrigger
+                          className="w-fit h-fit border-0 bg-transparent p-0 m-0 hover:bg-transparent focus:ring-0 focus:outline-none [&>svg]:hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Badge variant={statusConfig.variant} className="cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 text-xs">
+                            {statusConfig.label}
+                            <ChevronDown className="h-3 w-3" />
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent className="bg-white w-[120px]">
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="RECORDED">Recorded</SelectItem>
+                          <SelectItem value="NOTIFIED">Notified</SelectItem>
+                          <SelectItem value="COLLECTED">Collected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{payment.payeeName}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.memberSubscriberID || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.claimNumber || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ${payment.checkEFTAmount.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.datesOfService || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.paymentDate || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.checkNumber || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(payment.id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredPayments.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    No payments recorded. Add your first payment above.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">
+              {filteredPayments.length} payment{filteredPayments.length !== 1 ? 's' : ''}
+              {(statusFilter !== 'all' || searchQuery.trim()) && ` (filtered from ${payments.length} total)`}
+            </span>
+            <span className="text-sm font-semibold text-gray-900">Total: ${total.toFixed(2)}</span>
           </div>
         </div>
-      )}
+      </Card>
+      </div>
     </div>
   );
 }
