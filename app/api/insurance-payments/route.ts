@@ -64,13 +64,13 @@ export async function POST(request: NextRequest) {
     // Fetch all existing records for this user in one query (optimized)
     const existingPayments = await prisma.insurancePayment.findMany({
       where: { userId },
-      select: { id: true, memberSubscriberID: true, datesOfService: true },
+      select: { id: true, memberSubscriberID: true, datesOfService: true, checkNumber: true },
     })
 
-    // Create a map for fast lookup: key = memberSubscriberID|datesOfService
+    // Create a map for fast lookup: key = memberSubscriberID|datesOfService|checkNumber
     const existingMap = new Map<string, string>()
     existingPayments.forEach(p => {
-      const key = `${p.memberSubscriberID}|${p.datesOfService || ''}`
+      const key = `${p.memberSubscriberID}|${p.datesOfService || ''}|${p.checkNumber || ''}`
       existingMap.set(key, p.id)
     })
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         payeeAddress: p.payeeAddress || null,
       }
 
-      const key = `${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}`
+      const key = `${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}|${paymentData.checkNumber || ''}`
       const existingId = existingMap.get(key)
 
       if (existingId && existingId !== 'pending') {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         // Add to map to prevent duplicates within same import
         existingMap.set(key, 'pending')
       }
-      // If existingId === 'pending', skip (duplicate in same import)
+      // If existingId === 'pending', skip (exact duplicate in same import)
     }
 
     // Batch create new records
