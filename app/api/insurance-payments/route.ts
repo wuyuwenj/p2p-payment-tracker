@@ -96,13 +96,18 @@ export async function POST(request: NextRequest) {
       const key = `${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}`
       const existingId = existingMap.get(key)
 
-      if (existingId) {
+      if (existingId && existingId !== 'pending') {
+        // Only update if we have a real existing record ID
         toUpdate.push({ id: existingId, data: paymentData })
-      } else {
+        // Mark as pending to avoid duplicate updates from same import
+        existingMap.set(key, 'pending')
+      } else if (!existingId) {
+        // New record - add to create list
         toCreate.push(paymentData)
         // Add to map to prevent duplicates within same import
         existingMap.set(key, 'pending')
       }
+      // If existingId === 'pending', skip (duplicate in same import)
     }
 
     // Batch create new records
