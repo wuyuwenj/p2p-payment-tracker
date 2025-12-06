@@ -64,6 +64,7 @@ export default function InsurancePaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
   // Autocomplete state for manual form
   const [suggestions, setSuggestions] = useState<PatientSuggestion[]>([]);
@@ -183,21 +184,38 @@ export default function InsurancePaymentsPage() {
           console.log('First payment to import:', newPayments[0]);
         }
 
-        const response = await fetch('/api/insurance-payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ payments: newPayments }),
-        });
+        // Process in batches of 50 for progress tracking
+        const BATCH_SIZE = 50;
+        const totalRecords = newPayments.length;
+        let totalCreated = 0;
+        let totalUpdated = 0;
 
-        if (response.ok) {
-          const result = await response.json();
-          toast({ title: `Successfully imported ${result.total || result.count} payment records (${result.created} new, ${result.updated} updated)` });
-          fetchPayments();
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('API error:', response.status, errorData);
-          toast({ title: `Error importing payments: ${errorData.error || response.statusText}`, variant: 'destructive' });
+        setImportProgress({ current: 0, total: totalRecords });
+
+        for (let i = 0; i < totalRecords; i += BATCH_SIZE) {
+          const batch = newPayments.slice(i, i + BATCH_SIZE);
+
+          const response = await fetch('/api/insurance-payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payments: batch }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            totalCreated += result.created || 0;
+            totalUpdated += result.updated || 0;
+            setImportProgress({ current: Math.min(i + BATCH_SIZE, totalRecords), total: totalRecords });
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('API error:', response.status, errorData);
+            toast({ title: `Error importing batch: ${errorData.error || response.statusText}`, variant: 'destructive' });
+            break;
+          }
         }
+
+        toast({ title: `Successfully imported ${totalCreated + totalUpdated} payment records (${totalCreated} new, ${totalUpdated} updated)` });
+        fetchPayments();
       } catch (error) {
         console.error('Error parsing Excel file:', error);
         toast({ title: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
@@ -374,11 +392,26 @@ export default function InsurancePaymentsPage() {
       {/* Import Loading Overlay */}
       {importing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl min-w-[300px]">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-            <div className="text-center">
+            <div className="text-center w-full">
               <p className="text-lg font-semibold">Importing payments...</p>
-              <p className="text-sm text-gray-500">This may take a moment</p>
+              {importProgress.total > 0 && (
+                <>
+                  <p className="text-2xl font-bold text-blue-600 mt-2">
+                    {importProgress.current} / {importProgress.total}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-3 mt-3">
+                    <div
+                      className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {Math.round((importProgress.current / importProgress.total) * 100)}% complete
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
