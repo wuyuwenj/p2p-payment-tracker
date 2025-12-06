@@ -61,9 +61,22 @@ export async function POST(request: NextRequest) {
     // Get userId and ensure it's a string
     const userId = session.user.id as string
 
-    // Upsert payments based on memberSubscriberID + datesOfService
-    let createdCount = 0
-    let updatedCount = 0
+    // Fetch all existing records for this user in one query (optimized)
+    const existingPayments = await prisma.insurancePayment.findMany({
+      where: { userId },
+      select: { id: true, memberSubscriberID: true, datesOfService: true },
+    })
+
+    // Create a map for fast lookup: key = memberSubscriberID|datesOfService
+    const existingMap = new Map<string, string>()
+    existingPayments.forEach(p => {
+      const key = `${p.memberSubscriberID}|${p.datesOfService || ''}`
+      existingMap.set(key, p.id)
+    })
+
+    // Separate into records to create vs update
+    const toCreate: typeof payments = []
+    const toUpdate: { id: string; data: Record<string, unknown> }[] = []
 
     for (const p of payments) {
       const paymentData = {
@@ -80,29 +93,36 @@ export async function POST(request: NextRequest) {
         payeeAddress: p.payeeAddress || null,
       }
 
-      // Try to find existing record by memberSubscriberID + datesOfService
-      const existing = await prisma.insurancePayment.findFirst({
-        where: {
-          userId,
-          memberSubscriberID: paymentData.memberSubscriberID,
-          datesOfService: paymentData.datesOfService,
-        },
-      })
+      const key = `${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}`
+      const existingId = existingMap.get(key)
 
-      if (existing) {
-        // Update existing record
-        await prisma.insurancePayment.update({
-          where: { id: existing.id },
-          data: paymentData,
-        })
-        updatedCount++
+      if (existingId) {
+        toUpdate.push({ id: existingId, data: paymentData })
       } else {
-        // Create new record
-        await prisma.insurancePayment.create({
-          data: paymentData,
-        })
-        createdCount++
+        toCreate.push(paymentData)
+        // Add to map to prevent duplicates within same import
+        existingMap.set(key, 'pending')
       }
+    }
+
+    // Batch create new records
+    let createdCount = 0
+    if (toCreate.length > 0) {
+      const result = await prisma.insurancePayment.createMany({
+        data: toCreate,
+        skipDuplicates: true,
+      })
+      createdCount = result.count
+    }
+
+    // Update existing records (still need individual updates for different data)
+    let updatedCount = 0
+    for (const { id, data } of toUpdate) {
+      await prisma.insurancePayment.update({
+        where: { id },
+        data,
+      })
+      updatedCount++
     }
 
     return NextResponse.json({
