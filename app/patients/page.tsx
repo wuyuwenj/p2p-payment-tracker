@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Search, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { Card } from '@/components/tracker/Card';
@@ -293,8 +293,8 @@ export default function PatientsPage() {
                 const isLoadingDetails = loadingDetails === key;
 
                 return (
-                  <>
-                    <tr key={`row-${index}`} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => togglePatientDetails(patient)}>
+                  <React.Fragment key={key}>
+                    <tr className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => togglePatientDetails(patient)}>
                       <td className="px-2 py-4 whitespace-nowrap">
                         <button className="text-gray-400 hover:text-gray-600 transition-transform">
                           {isExpanded ? (
@@ -448,7 +448,7 @@ export default function PatientsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

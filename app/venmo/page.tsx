@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { VenmoPayment } from '@/lib/types';
 import { Button } from '@/components/tracker/Button';
@@ -14,6 +15,7 @@ interface PatientSuggestion {
 }
 
 export default function VenmoPaymentsPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [payments, setPayments] = useState<VenmoPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -402,14 +404,18 @@ export default function VenmoPaymentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={payment.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{payment.patientName}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.memberSubscriberID}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.amount.toFixed(2)}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.date}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{payment.notes}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(payment.id)}>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </td>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import * as XLSX from 'xlsx';
 import { Upload, Trash2, HelpCircle, X, ChevronDown, Plus, Search, Loader2 } from 'lucide-react';
@@ -55,6 +56,7 @@ interface PatientSuggestion {
 }
 
 export default function InsurancePaymentsPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [payments, setPayments] = useState<InsurancePayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -550,7 +552,7 @@ export default function InsurancePaymentsPage() {
         <h3 className="font-medium text-gray-900 mb-4">Add Manual Payment</h3>
         <div className="space-y-4">
           {manualPayments.map((row, index) => (
-            <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div key={index}>
               {/* Payee Name and Member ID Row */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="relative">
@@ -698,15 +700,17 @@ export default function InsurancePaymentsPage() {
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-3 mt-4">
-          <Button variant="ghost" size="sm" onClick={addManualPaymentRow}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Row
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleManualSubmit}>
-            Save All
-          </Button>
-        </div>
+        {manualPayments.some(row => row.payeeName.trim().length > 0) && (
+          <div className="flex items-center gap-3 mt-4">
+            <Button variant="ghost" size="sm" onClick={addManualPaymentRow}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Row
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleManualSubmit}>
+              Save All
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Payments Table */}
@@ -731,7 +735,11 @@ export default function InsurancePaymentsPage() {
                 const statusConfig = getStatusConfig(payment.trackingStatus);
 
                 return (
-                  <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={payment.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <Select
                         value={payment.trackingStatus}
@@ -764,7 +772,7 @@ export default function InsurancePaymentsPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.paymentDate || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.checkNumber || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(payment.id)}>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </td>
