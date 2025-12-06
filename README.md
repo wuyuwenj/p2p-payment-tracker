@@ -2,6 +2,26 @@
 
 A Next.js web application for tracking insurance payments and patient reimbursements in a "paid to patient" scenario.
 
+## The Problem
+
+In healthcare, insurance companies sometimes pay patients directly instead of paying the medical provider (called "paid to patient" or "PPT" payments). When this happens:
+
+1. **Insurance pays the patient** - The insurance company sends a check directly to the patient for medical services rendered by the provider
+2. **Provider needs to collect** - The medical practice still needs to collect that money from the patient
+3. **Tracking is manual and tedious** - Practices receive Excel reports from insurance companies showing these payments, but tracking who owes what is difficult
+4. **Collection status is unclear** - Without a system, it's hard to know which patients have been notified, who has paid, and who still owes money
+
+## The Solution
+
+This app helps medical practices manage the entire "paid to patient" collection workflow:
+
+1. **Import** - Upload insurance payment data from Excel files exported from insurance portals
+2. **Track** - Record patient payments received via Venmo or other P2P payment methods
+3. **Monitor** - See which patients have outstanding balances, who has paid in full, and who has overpaid
+4. **Status Workflow** - Track each payment through collection stages: Pending → Recorded → Notified → Collected
+5. **Export** - Generate PDF reports for documentation and patient follow-up
+6. **Customize** - Filter by status, toggle columns, and focus on what matters
+
 ## Features
 
 ### 1. Insurance Payments Page
