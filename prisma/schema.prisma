@@ -85,7 +85,7 @@ model InsurancePayment {
   memberSubscriberID String         @map("member_subscriber_id")
   providerName       String?        @map("provider_name")
   paymentDate        String?        @map("payment_date")
-  claimNumber        String?        @unique @map("claim_number")
+  claimNumber        String?        @map("claim_number")
   checkNumber        String?        @map("check_number")
   checkEFTAmount     Decimal        @default(0) @map("check_eft_amount") @db.Decimal(10, 2)
   payeeName          String         @map("payee_name")
