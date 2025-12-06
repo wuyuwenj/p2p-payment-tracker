@@ -136,3 +136,31 @@ export function DropdownMenuItem({ children, onClick, className = '' }: Dropdown
     </button>
   );
 }
+
+interface DropdownMenuCheckboxItemProps {
+  children: ReactNode;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  className?: string;
+}
+
+export function DropdownMenuCheckboxItem({ children, checked, onCheckedChange, className = '' }: DropdownMenuCheckboxItemProps) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onCheckedChange(!checked);
+      }}
+      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center gap-2 ${className}`}
+    >
+      <div className={`w-4 h-4 border rounded flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+        {checked && (
+          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+      {children}
+    </button>
+  );
+}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { Card } from '@/components/tracker/Card';
 import { Badge } from '@/components/tracker/Badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -266,19 +266,20 @@ export default function PatientsPage() {
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="w-[4%] px-2 py-3"></th>
                 <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
                 <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Insurance</th>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Paid</th>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="w-[17%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="w-[13%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredPatients.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     {searchTerm || filterStatus !== 'all'
                       ? 'No patients match your search or filter criteria.'
                       : 'No patients found. Import insurance payments to get started.'}
@@ -293,7 +294,16 @@ export default function PatientsPage() {
 
                 return (
                   <>
-                    <tr key={`row-${index}`} className="hover:bg-gray-50 transition-colors">
+                    <tr key={`row-${index}`} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => togglePatientDetails(patient)}>
+                      <td className="px-2 py-4 whitespace-nowrap">
+                        <button className="text-gray-400 hover:text-gray-600 transition-transform">
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{patient.name}</div>
                         <div className="text-xs text-gray-500">
@@ -319,25 +329,18 @@ export default function PatientsPage() {
                         {getStatusBadge(patient.balance)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => togglePatientDetails(patient)}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
-                          >
-                            {isExpanded ? 'Hide' : 'Show'}
-                          </button>
-                          <a
-                            href={`/patient/${encodeURIComponent(key)}`}
-                            className="text-gray-600 hover:text-gray-900 font-medium"
-                          >
-                            Details
-                          </a>
-                        </div>
+                        <a
+                          href={`/patient/${encodeURIComponent(key)}`}
+                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Details
+                        </a>
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr key={`expanded-${index}`}>
-                        <td colSpan={7} className="px-4 py-4 bg-gray-50">
+                        <td colSpan={8} className="px-4 py-4 bg-gray-50">
                           {isLoadingDetails ? (
                             <div className="text-center py-4 text-gray-500">Loading details...</div>
                           ) : details ? (
