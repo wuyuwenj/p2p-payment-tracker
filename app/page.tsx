@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import * as XLSX from 'xlsx';
-import { Upload, Trash2, HelpCircle, X, ChevronDown, Plus, Search } from 'lucide-react';
+import { Upload, Trash2, HelpCircle, X, ChevronDown, Plus, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/tracker/Button';
 import { Input } from '@/components/tracker/Input';
 import { Badge } from '@/components/tracker/Badge';
@@ -63,6 +63,7 @@ export default function InsurancePaymentsPage() {
   const [manualPayments, setManualPayments] = useState<ManualPaymentForm[]>([{ ...emptyPaymentForm }]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [importing, setImporting] = useState(false);
 
   // Autocomplete state for manual form
   const [suggestions, setSuggestions] = useState<PatientSuggestion[]>([]);
@@ -135,6 +136,7 @@ export default function InsurancePaymentsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setImporting(true);
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -189,7 +191,7 @@ export default function InsurancePaymentsPage() {
 
         if (response.ok) {
           const result = await response.json();
-          toast({ title: `Successfully imported ${result.count} payment records` });
+          toast({ title: `Successfully imported ${result.total || result.count} payment records (${result.created} new, ${result.updated} updated)` });
           fetchPayments();
         } else {
           const errorData = await response.json().catch(() => ({}));
@@ -199,6 +201,8 @@ export default function InsurancePaymentsPage() {
       } catch (error) {
         console.error('Error parsing Excel file:', error);
         toast({ title: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
+      } finally {
+        setImporting(false);
       }
     };
     reader.readAsBinaryString(file);
@@ -367,6 +371,18 @@ export default function InsurancePaymentsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Import Loading Overlay */}
+      {importing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <div className="text-center">
+              <p className="text-lg font-semibold">Importing payments...</p>
+              <p className="text-sm text-gray-500">This may take a moment</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -378,14 +394,24 @@ export default function InsurancePaymentsPage() {
               <HelpCircle className="w-4 h-4 mr-2" />
               Help
             </Button>
-            <label className="cursor-pointer inline-flex items-center justify-center font-medium rounded-lg transition-colors bg-transparent text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm">
-              <Upload className="w-4 h-4 mr-2" />
-              Import Excel
+            <label className={`inline-flex items-center justify-center font-medium rounded-lg transition-colors px-3 py-1.5 text-sm ${importing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-transparent text-gray-700 hover:bg-gray-100 cursor-pointer'}`}>
+              {importing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Excel
+                </>
+              )}
               <input
                 type="file"
                 accept=".xlsx,.xls"
                 onChange={handleFileUpload}
                 className="hidden"
+                disabled={importing}
               />
             </label>
             <Button variant="destructive" size="sm" onClick={handleClearAll}>
