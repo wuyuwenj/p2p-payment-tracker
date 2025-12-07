@@ -7,7 +7,7 @@ import { VenmoPayment } from '@/lib/types';
 import { Button } from '@/components/tracker/Button';
 import { Input } from '@/components/tracker/Input';
 import { Card } from '@/components/tracker/Card';
-import { Trash2, Plus, Search } from 'lucide-react';
+import { Trash2, Plus, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface PatientSuggestion {
   name: string;
@@ -36,6 +36,46 @@ export default function VenmoPaymentsPage() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination state
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const PAGE_SIZE_OPTIONS = [10, 25, 100];
+
+  // Sorting state
+  type SortField = 'patientName' | 'memberSubscriberID' | 'amount' | 'date' | 'notes';
+  type SortDirection = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <th
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <span className="flex flex-col">
+          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+        </span>
+      </div>
+    </th>
+  );
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetchPayments();
@@ -44,6 +84,11 @@ export default function VenmoPaymentsPage() {
       setLoading(false);
     }
   }, [status]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortField, sortDirection]);
 
   const fetchPayments = async () => {
     try {
@@ -229,7 +274,42 @@ export default function VenmoPaymentsPage() {
     return true;
   });
 
-  const total = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  // Apply sorting
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    if (!sortField || !sortDirection) return 0;
+
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    switch (sortField) {
+      case 'amount':
+        aVal = a.amount ?? 0;
+        bVal = b.amount ?? 0;
+        break;
+      default:
+        aVal = (a[sortField] ?? '').toString().toLowerCase();
+        bVal = (b[sortField] ?? '').toString().toLowerCase();
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedPayments.length / pageSize);
+  const paginatedPayments = sortedPayments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset page when page size changes
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
+  const total = sortedPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -394,16 +474,16 @@ export default function VenmoPaymentsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                  <SortableHeader field="patientName">Patient Name</SortableHeader>
+                  <SortableHeader field="memberSubscriberID">Member ID</SortableHeader>
+                  <SortableHeader field="amount">Amount</SortableHeader>
+                  <SortableHeader field="date">Date</SortableHeader>
+                  <SortableHeader field="notes">Notes</SortableHeader>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredPayments.map((payment) => (
+                {paginatedPayments.map((payment) => (
                   <tr
                     key={payment.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -421,7 +501,7 @@ export default function VenmoPaymentsPage() {
                     </td>
                   </tr>
                 ))}
-                {filteredPayments.length === 0 && (
+                {paginatedPayments.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                       {searchQuery.trim() ? 'No payments match your search.' : 'No payments recorded. Add your first payment above.'}
@@ -434,11 +514,64 @@ export default function VenmoPaymentsPage() {
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">
-                {filteredPayments.length} payment{filteredPayments.length !== 1 ? 's' : ''}
+                {sortedPayments.length > 0
+                  ? `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, sortedPayments.length)} of ${sortedPayments.length}`
+                  : '0 payments'
+                }
                 {searchQuery.trim() && ` (filtered from ${payments.length} total)`}
               </span>
               <span className="text-sm font-semibold text-gray-900">Total: ${total.toFixed(2)}</span>
             </div>
+            {/* Pagination Controls */}
+            {sortedPayments.length > 10 && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Rows per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {PAGE_SIZE_OPTIONS.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600 px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>

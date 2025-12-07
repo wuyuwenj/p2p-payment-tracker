@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Search, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '@/components/tracker/Card';
 import { Badge } from '@/components/tracker/Badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -43,6 +43,46 @@ export default function PatientsPage() {
   const [patientDetails, setPatientDetails] = useState<Record<string, PatientDetails>>({});
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
 
+  // Pagination state
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const PAGE_SIZE_OPTIONS = [10, 25, 100];
+
+  // Sorting state
+  type SortField = 'name' | 'memberID' | 'totalInsurance' | 'totalVenmo' | 'balance';
+  type SortDirection = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <span className="flex flex-col">
+          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+        </span>
+      </div>
+    </th>
+  );
+
   useEffect(() => {
     if (status === 'authenticated') {
       loadPatients();
@@ -53,7 +93,12 @@ export default function PatientsPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [searchTerm, filterStatus, patients]);
+  }, [searchTerm, filterStatus, patients, sortField, sortDirection]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, sortField, sortDirection]);
 
   const loadPatients = async () => {
     try {
@@ -90,7 +135,55 @@ export default function PatientsPage() {
       filtered = filtered.filter(p => p.balance < 0);
     }
 
+    // Apply sorting
+    if (sortField && sortDirection) {
+      filtered.sort((a, b) => {
+        let aVal: string | number = '';
+        let bVal: string | number = '';
+
+        switch (sortField) {
+          case 'name':
+            aVal = a.name.toLowerCase();
+            bVal = b.name.toLowerCase();
+            break;
+          case 'memberID':
+            aVal = a.memberID.toLowerCase();
+            bVal = b.memberID.toLowerCase();
+            break;
+          case 'totalInsurance':
+            aVal = a.totalInsurance;
+            bVal = b.totalInsurance;
+            break;
+          case 'totalVenmo':
+            aVal = a.totalVenmo;
+            bVal = b.totalVenmo;
+            break;
+          case 'balance':
+            aVal = a.balance;
+            bVal = b.balance;
+            break;
+        }
+
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     setFilteredPatients(filtered);
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPatients.length / pageSize);
+  const paginatedPatients = filteredPatients.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset page when page size changes
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
   };
 
   const getPatientKey = (patient: PatientSummary) => {
@@ -267,17 +360,17 @@ export default function PatientsPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="w-[4%] px-2 py-3"></th>
-                <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
-                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Insurance</th>
-                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Paid</th>
-                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                <SortableHeader field="name" className="w-[20%]">Patient Name</SortableHeader>
+                <SortableHeader field="memberID" className="w-[15%]">Member ID</SortableHeader>
+                <SortableHeader field="totalInsurance" className="w-[12%]">Insurance</SortableHeader>
+                <SortableHeader field="totalVenmo" className="w-[12%]">Patient Paid</SortableHeader>
+                <SortableHeader field="balance" className="w-[12%]">Balance</SortableHeader>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="w-[13%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredPatients.length === 0 && (
+              {paginatedPatients.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     {searchTerm || filterStatus !== 'all'
@@ -286,7 +379,7 @@ export default function PatientsPage() {
                   </td>
                 </tr>
               )}
-              {filteredPatients.map((patient, index) => {
+              {paginatedPatients.map((patient, index) => {
                 const key = getPatientKey(patient);
                 const isExpanded = expandedPatient === key;
                 const details = patientDetails[key];
@@ -457,13 +550,66 @@ export default function PatientsPage() {
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">
-                {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''}
+                {filteredPatients.length > 0
+                  ? `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, filteredPatients.length)} of ${filteredPatients.length}`
+                  : '0 patients'
+                }
                 {(searchTerm || filterStatus !== 'all') && ` (filtered from ${patients.length} total)`}
               </span>
               <span className="text-sm font-semibold text-gray-900">
                 Outstanding: ${filteredPatients.filter(p => p.balance > 0).reduce((sum, p) => sum + p.balance, 0).toFixed(2)}
               </span>
             </div>
+            {/* Pagination Controls */}
+            {filteredPatients.length > 10 && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Rows per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {PAGE_SIZE_OPTIONS.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600 px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>

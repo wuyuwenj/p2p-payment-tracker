@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ChevronDown, Trash2, Copy, Check, Settings2, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Copy, Check, Settings2, Download, HelpCircle, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/tracker/Badge';
@@ -94,6 +94,99 @@ export default function PatientDetailsPage() {
     () => INSURANCE_COLUMNS.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultVisible }), {} as Record<ColumnKey, boolean>)
   );
 
+  // Selection state for PDF export
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [showExportHelp, setShowExportHelp] = useState(false);
+
+  // Pagination state
+  const [insurancePageSize, setInsurancePageSize] = useState<number>(10);
+  const [insuranceCurrentPage, setInsuranceCurrentPage] = useState<number>(1);
+  const [venmoPageSize, setVenmoPageSize] = useState<number>(10);
+  const [venmoCurrentPage, setVenmoCurrentPage] = useState<number>(1);
+
+  const PAGE_SIZE_OPTIONS = [10, 25, 100];
+
+  const togglePaymentSelection = (paymentId: string) => {
+    setSelectedPayments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(paymentId)) {
+        newSet.delete(paymentId);
+      } else {
+        newSet.add(paymentId);
+      }
+      return newSet;
+    });
+  };
+
+  // Insurance table sorting state
+  type InsuranceSortField = 'trackingStatus' | 'payeeName' | 'claimStatus' | 'datesOfService' | 'providerName' | 'paymentDate' | 'checkNumber' | 'checkEFTAmount' | 'payeeAddress';
+  type SortDirection = 'asc' | 'desc' | null;
+  const [insuranceSortField, setInsuranceSortField] = useState<InsuranceSortField | null>(null);
+  const [insuranceSortDirection, setInsuranceSortDirection] = useState<SortDirection>(null);
+
+  // Venmo table sorting state
+  type VenmoSortField = 'date' | 'amount' | 'notes';
+  const [venmoSortField, setVenmoSortField] = useState<VenmoSortField | null>(null);
+  const [venmoSortDirection, setVenmoSortDirection] = useState<SortDirection>(null);
+
+  const handleInsuranceSort = (field: InsuranceSortField) => {
+    if (insuranceSortField === field) {
+      if (insuranceSortDirection === 'asc') {
+        setInsuranceSortDirection('desc');
+      } else if (insuranceSortDirection === 'desc') {
+        setInsuranceSortField(null);
+        setInsuranceSortDirection(null);
+      }
+    } else {
+      setInsuranceSortField(field);
+      setInsuranceSortDirection('asc');
+    }
+  };
+
+  const handleVenmoSort = (field: VenmoSortField) => {
+    if (venmoSortField === field) {
+      if (venmoSortDirection === 'asc') {
+        setVenmoSortDirection('desc');
+      } else if (venmoSortDirection === 'desc') {
+        setVenmoSortField(null);
+        setVenmoSortDirection(null);
+      }
+    } else {
+      setVenmoSortField(field);
+      setVenmoSortDirection('asc');
+    }
+  };
+
+  const InsuranceSortableHeader = ({ field, children }: { field: InsuranceSortField; children: React.ReactNode }) => (
+    <th
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      onClick={() => handleInsuranceSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <span className="flex flex-col">
+          <ChevronUp className={`w-3 h-3 -mb-1 ${insuranceSortField === field && insuranceSortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronDown className={`w-3 h-3 ${insuranceSortField === field && insuranceSortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+        </span>
+      </div>
+    </th>
+  );
+
+  const VenmoSortableHeader = ({ field, children }: { field: VenmoSortField; children: React.ReactNode }) => (
+    <th
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      onClick={() => handleVenmoSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <span className="flex flex-col">
+          <ChevronUp className={`w-3 h-3 -mb-1 ${venmoSortField === field && venmoSortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronDown className={`w-3 h-3 ${venmoSortField === field && venmoSortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+        </span>
+      </div>
+    </th>
+  );
+
   const toggleColumn = (key: ColumnKey) => {
     setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
   };
@@ -107,6 +200,15 @@ export default function PatientDetailsPage() {
       setLoading(false);
     }
   }, [status, patientId]);
+
+  // Reset page to 1 when filter or sort changes
+  useEffect(() => {
+    setInsuranceCurrentPage(1);
+  }, [statusFilter, insuranceSortField, insuranceSortDirection]);
+
+  useEffect(() => {
+    setVenmoCurrentPage(1);
+  }, [venmoSortField, venmoSortDirection]);
 
   const loadPatientData = async () => {
     try {
@@ -146,6 +248,16 @@ export default function PatientDetailsPage() {
   const exportToPDF = () => {
     if (!patientInfo) return;
 
+    // Determine which payments to export: selected ones or all filtered
+    const paymentsToExport = selectedPayments.size > 0
+      ? sortedInsurancePayments.filter(p => selectedPayments.has(p.id))
+      : sortedInsurancePayments;
+
+    if (paymentsToExport.length === 0) {
+      alert('No payments to export. Please select at least one payment or ensure there are payments in the filtered view.');
+      return;
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -181,8 +293,8 @@ export default function PatientDetailsPage() {
       }
     });
 
-    // Build table data
-    const tableData = filteredInsurancePayments.map(payment => {
+    // Build table data from selected/filtered payments
+    const tableData = paymentsToExport.map(payment => {
       const row: string[] = [];
       columnKeys.forEach(key => {
         switch (key) {
@@ -229,10 +341,11 @@ export default function PatientDetailsPage() {
     });
 
     // Summary footer
+    const exportTotal = paymentsToExport.reduce((sum, p) => sum + p.checkEFTAmount, 0);
     const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY || 200;
     doc.setFontSize(10);
-    doc.text(`Total Payments: ${filteredInsurancePayments.length}`, 14, finalY + 10);
-    doc.text(`Total Amount: $${filteredTotalInsurance.toFixed(2)}`, 14, finalY + 17);
+    doc.text(`Total Payments: ${paymentsToExport.length}`, 14, finalY + 10);
+    doc.text(`Total Amount: $${exportTotal.toFixed(2)}`, 14, finalY + 17);
 
     // Download
     const fileName = `${patientInfo.name.replace(/\s+/g, '_')}_insurance_payments_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -261,6 +374,91 @@ export default function PatientDetailsPage() {
   const filteredInsurancePayments = statusFilter === 'all'
     ? insurancePayments
     : insurancePayments.filter(p => p.trackingStatus === statusFilter);
+
+  // Apply sorting to insurance payments
+  const sortedInsurancePayments = [...filteredInsurancePayments].sort((a, b) => {
+    if (!insuranceSortField || !insuranceSortDirection) return 0;
+
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    switch (insuranceSortField) {
+      case 'trackingStatus':
+        const statusOrder = { PENDING: 0, RECORDED: 1, NOTIFIED: 2, COLLECTED: 3 };
+        aVal = statusOrder[a.trackingStatus] ?? 0;
+        bVal = statusOrder[b.trackingStatus] ?? 0;
+        break;
+      case 'checkEFTAmount':
+        aVal = a.checkEFTAmount ?? 0;
+        bVal = b.checkEFTAmount ?? 0;
+        break;
+      default:
+        aVal = (a[insuranceSortField] ?? '').toString().toLowerCase();
+        bVal = (b[insuranceSortField] ?? '').toString().toLowerCase();
+    }
+
+    if (aVal < bVal) return insuranceSortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return insuranceSortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Selection helpers (must be after sortedInsurancePayments is defined)
+  const toggleSelectAll = () => {
+    if (selectedPayments.size === sortedInsurancePayments.length) {
+      setSelectedPayments(new Set());
+    } else {
+      setSelectedPayments(new Set(sortedInsurancePayments.map(p => p.id)));
+    }
+  };
+
+  const isAllSelected = sortedInsurancePayments.length > 0 && selectedPayments.size === sortedInsurancePayments.length;
+  const isSomeSelected = selectedPayments.size > 0 && selectedPayments.size < sortedInsurancePayments.length;
+
+  // Apply sorting to venmo payments
+  const sortedVenmoPayments = [...venmoPayments].sort((a, b) => {
+    if (!venmoSortField || !venmoSortDirection) return 0;
+
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    switch (venmoSortField) {
+      case 'amount':
+        aVal = a.amount ?? 0;
+        bVal = b.amount ?? 0;
+        break;
+      default:
+        aVal = (a[venmoSortField] ?? '').toString().toLowerCase();
+        bVal = (b[venmoSortField] ?? '').toString().toLowerCase();
+    }
+
+    if (aVal < bVal) return venmoSortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return venmoSortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Pagination calculations
+  const insuranceTotalPages = Math.ceil(sortedInsurancePayments.length / insurancePageSize);
+  const paginatedInsurancePayments = sortedInsurancePayments.slice(
+    (insuranceCurrentPage - 1) * insurancePageSize,
+    insuranceCurrentPage * insurancePageSize
+  );
+
+  const venmoTotalPages = Math.ceil(sortedVenmoPayments.length / venmoPageSize);
+  const paginatedVenmoPayments = sortedVenmoPayments.slice(
+    (venmoCurrentPage - 1) * venmoPageSize,
+    venmoCurrentPage * venmoPageSize
+  );
+
+  // Reset to page 1 when filters change
+  const handleInsurancePageSizeChange = (newSize: number) => {
+    setInsurancePageSize(newSize);
+    setInsuranceCurrentPage(1);
+  };
+
+  const handleVenmoPageSizeChange = (newSize: number) => {
+    setVenmoPageSize(newSize);
+    setVenmoCurrentPage(1);
+  };
 
   const totalInsurance = insurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
   const filteredTotalInsurance = filteredInsurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
@@ -369,17 +567,45 @@ export default function PatientDetailsPage() {
           </div>
         </div>
 
+        {/* Export Help Panel */}
+        {showExportHelp && (
+          <Card className="p-6 mb-6 animate-fade-in bg-blue-50 border-blue-200">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-semibold text-blue-800">PDF Export Guide</h3>
+              <button
+                onClick={() => setShowExportHelp(false)}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-sm text-blue-700 space-y-2">
+              <p><strong>Select specific records:</strong> Use the checkboxes on the left of each row to select only the payments you want to export. The PDF will only include selected records.</p>
+              <p><strong>Export all visible:</strong> If no records are selected, all currently visible (filtered) records will be exported.</p>
+              <p><strong>Hide columns:</strong> Use the "Columns" button to hide columns you don't want in the PDF export. Hidden columns won't appear in the exported document.</p>
+              <p><strong>Filter by status:</strong> Use the status dropdown to filter payments before export. Only filtered payments will be included.</p>
+            </div>
+            <p className="text-xs text-blue-600 mt-3">
+              Tip: The export will respect your current sort order, column visibility, and row selections.
+            </p>
+          </Card>
+        )}
+
         {/* Insurance Payments Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Insurance Payments</h2>
             <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => setShowExportHelp(!showExportHelp)}>
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Help
+              </Button>
               <button
                 onClick={exportToPDF}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white border border-blue-600 rounded-md hover:bg-blue-700"
               >
                 <Download className="w-4 h-4" />
-                Export PDF
+                Export PDF {selectedPayments.size > 0 && `(${selectedPayments.size})`}
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -431,21 +657,41 @@ export default function PatientDetailsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {isColumnVisible('tracking') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>}
-                    {isColumnVisible('patientName') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>}
-                    {isColumnVisible('claimStatus') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claim Status</th>}
-                    {isColumnVisible('serviceDates') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Dates</th>}
-                    {isColumnVisible('provider') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>}
-                    {isColumnVisible('paymentDate') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>}
-                    {isColumnVisible('checkNumber') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check #</th>}
-                    {isColumnVisible('amount') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claim Amount Paid</th>}
-                    {isColumnVisible('address') && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={el => {
+                          if (el) el.indeterminate = isSomeSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                        title={isAllSelected ? 'Deselect all' : 'Select all'}
+                      />
+                    </th>
+                    {isColumnVisible('tracking') && <InsuranceSortableHeader field="trackingStatus">Tracking</InsuranceSortableHeader>}
+                    {isColumnVisible('patientName') && <InsuranceSortableHeader field="payeeName">Patient Name</InsuranceSortableHeader>}
+                    {isColumnVisible('claimStatus') && <InsuranceSortableHeader field="claimStatus">Claim Status</InsuranceSortableHeader>}
+                    {isColumnVisible('serviceDates') && <InsuranceSortableHeader field="datesOfService">Service Dates</InsuranceSortableHeader>}
+                    {isColumnVisible('provider') && <InsuranceSortableHeader field="providerName">Provider</InsuranceSortableHeader>}
+                    {isColumnVisible('paymentDate') && <InsuranceSortableHeader field="paymentDate">Payment Date</InsuranceSortableHeader>}
+                    {isColumnVisible('checkNumber') && <InsuranceSortableHeader field="checkNumber">Check #</InsuranceSortableHeader>}
+                    {isColumnVisible('amount') && <InsuranceSortableHeader field="checkEFTAmount">Claim Amount Paid</InsuranceSortableHeader>}
+                    {isColumnVisible('address') && <InsuranceSortableHeader field="payeeAddress">Address</InsuranceSortableHeader>}
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredInsurancePayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                  {paginatedInsurancePayments.map((payment) => (
+                    <tr key={payment.id} className={`hover:bg-gray-50 transition-colors ${selectedPayments.has(payment.id) ? 'bg-blue-50' : ''}`}>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedPayments.has(payment.id)}
+                          onChange={() => togglePaymentSelection(payment.id)}
+                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
                       {isColumnVisible('tracking') && (
                         <td className="px-4 py-4 whitespace-nowrap text-sm">
                           <Select
@@ -512,9 +758,9 @@ export default function PatientDetailsPage() {
                       </td>
                     </tr>
                   ))}
-                  {filteredInsurancePayments.length === 0 && (
+                  {paginatedInsurancePayments.length === 0 && (
                     <tr>
-                      <td colSpan={INSURANCE_COLUMNS.filter(col => isColumnVisible(col.key)).length + 1} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={INSURANCE_COLUMNS.filter(col => isColumnVisible(col.key)).length + 2} className="px-4 py-8 text-center text-gray-500">
                         {statusFilter === 'all'
                           ? 'No insurance payments recorded'
                           : `No payments with status "${TRACKING_STATUSES.find(s => s.value === statusFilter)?.label}"`
@@ -527,19 +773,85 @@ export default function PatientDetailsPage() {
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">
-                  {statusFilter === 'all'
-                    ? `${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
-                    : `Showing ${filteredInsurancePayments.length} of ${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
-                  }
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    {selectedPayments.size > 0 ? (
+                      <>
+                        {selectedPayments.size} selected
+                        <button
+                          onClick={() => setSelectedPayments(new Set())}
+                          className="ml-2 text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Clear selection
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Showing {((insuranceCurrentPage - 1) * insurancePageSize) + 1}-{Math.min(insuranceCurrentPage * insurancePageSize, sortedInsurancePayments.length)} of {sortedInsurancePayments.length}
+                        {statusFilter !== 'all' && ` (filtered from ${insurancePayments.length})`}
+                      </>
+                    )}
+                  </span>
+                </div>
                 <span className="text-sm font-semibold text-blue-600">
-                  {statusFilter === 'all'
-                    ? `Total: $${totalInsurance.toFixed(2)}`
-                    : `Filtered Total: $${filteredTotalInsurance.toFixed(2)}`
+                  {selectedPayments.size > 0
+                    ? `Selected Total: $${sortedInsurancePayments.filter(p => selectedPayments.has(p.id)).reduce((sum, p) => sum + p.checkEFTAmount, 0).toFixed(2)}`
+                    : statusFilter === 'all'
+                      ? `Total: $${totalInsurance.toFixed(2)}`
+                      : `Filtered Total: $${filteredTotalInsurance.toFixed(2)}`
                   }
                 </span>
               </div>
+              {/* Pagination Controls */}
+              {sortedInsurancePayments.length > 10 && (
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <select
+                      value={insurancePageSize}
+                      onChange={(e) => handleInsurancePageSizeChange(Number(e.target.value))}
+                      className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {PAGE_SIZE_OPTIONS.map(size => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setInsuranceCurrentPage(1)}
+                      disabled={insuranceCurrentPage === 1}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => setInsuranceCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={insuranceCurrentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600 px-2">
+                      Page {insuranceCurrentPage} of {insuranceTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setInsuranceCurrentPage(prev => Math.min(insuranceTotalPages, prev + 1))}
+                      disabled={insuranceCurrentPage === insuranceTotalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => setInsuranceCurrentPage(insuranceTotalPages)}
+                      disabled={insuranceCurrentPage === insuranceTotalPages}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -558,14 +870,14 @@ export default function PatientDetailsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                    <VenmoSortableHeader field="date">Date</VenmoSortableHeader>
+                    <VenmoSortableHeader field="amount">Amount</VenmoSortableHeader>
+                    <VenmoSortableHeader field="notes">Notes</VenmoSortableHeader>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {venmoPayments.map((payment) => (
+                  {paginatedVenmoPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.date}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
@@ -581,7 +893,7 @@ export default function PatientDetailsPage() {
                       </td>
                     </tr>
                   ))}
-                  {venmoPayments.length === 0 && (
+                  {paginatedVenmoPayments.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                         No Venmo payments recorded
@@ -594,10 +906,63 @@ export default function PatientDetailsPage() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">
-                  {venmoPayments.length} payment{venmoPayments.length !== 1 ? 's' : ''}
+                  {sortedVenmoPayments.length > 0
+                    ? `Showing ${((venmoCurrentPage - 1) * venmoPageSize) + 1}-${Math.min(venmoCurrentPage * venmoPageSize, sortedVenmoPayments.length)} of ${sortedVenmoPayments.length}`
+                    : `${venmoPayments.length} payment${venmoPayments.length !== 1 ? 's' : ''}`
+                  }
                 </span>
                 <span className="text-sm font-semibold text-green-600">Total: ${totalVenmo.toFixed(2)}</span>
               </div>
+              {/* Pagination Controls */}
+              {sortedVenmoPayments.length > 10 && (
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <select
+                      value={venmoPageSize}
+                      onChange={(e) => handleVenmoPageSizeChange(Number(e.target.value))}
+                      className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {PAGE_SIZE_OPTIONS.map(size => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setVenmoCurrentPage(1)}
+                      disabled={venmoCurrentPage === 1}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => setVenmoCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={venmoCurrentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600 px-2">
+                      Page {venmoCurrentPage} of {venmoTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setVenmoCurrentPage(prev => Math.min(venmoTotalPages, prev + 1))}
+                      disabled={venmoCurrentPage === venmoTotalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => setVenmoCurrentPage(venmoTotalPages)}
+                      disabled={venmoCurrentPage === venmoTotalPages}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
