@@ -110,30 +110,33 @@ export async function POST(request: NextRequest) {
       // If existingId === 'pending', skip (exact duplicate in same import)
     }
 
-    // Batch create new records
-    let createdCount = 0
+    // Create new records and collect their IDs
+    const createdIds: string[] = []
     if (toCreate.length > 0) {
-      const result = await prisma.insurancePayment.createMany({
-        data: toCreate,
-        skipDuplicates: true,
-      })
-      createdCount = result.count
+      // Use individual creates to get IDs back
+      const createPromises = toCreate.map(data =>
+        prisma.insurancePayment.create({ data, select: { id: true } })
+      )
+      const createdRecords = await Promise.all(createPromises)
+      createdIds.push(...createdRecords.map(r => r.id))
     }
 
-    // Update existing records (still need individual updates for different data)
-    let updatedCount = 0
+    // Update existing records and collect their IDs
+    const updatedIds: string[] = []
     for (const { id, data } of toUpdate) {
       await prisma.insurancePayment.update({
         where: { id },
         data,
       })
-      updatedCount++
+      updatedIds.push(id)
     }
 
     return NextResponse.json({
-      created: createdCount,
-      updated: updatedCount,
-      total: createdCount + updatedCount
+      created: createdIds.length,
+      updated: updatedIds.length,
+      total: createdIds.length + updatedIds.length,
+      ids: [...createdIds, ...updatedIds],
+      count: createdIds.length + updatedIds.length
     })
   } catch (error) {
     console.error("Error creating insurance payments:", error)

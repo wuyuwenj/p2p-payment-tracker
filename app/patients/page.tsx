@@ -444,6 +444,29 @@ export default function PatientsPage() {
                                   Insurance Payments ({details.insurancePayments.length})
                                 </h4>
                                 {details.insurancePayments.length > 0 ? (
+                                  (() => {
+                                    // Calculate which insurance payments are covered by Venmo
+                                    const totalVenmo = details.venmoPayments.reduce((sum, p) => sum + p.amount, 0);
+                                    const paidPaymentIds = new Set<string>();
+                                    let partialPaymentId: string | null = null;
+                                    let partialCoveragePercent = 0;
+
+                                    if (totalVenmo > 0) {
+                                      let remainingVenmo = totalVenmo;
+                                      for (const payment of details.insurancePayments) {
+                                        if (remainingVenmo <= 0) break;
+                                        if (remainingVenmo >= payment.checkEFTAmount) {
+                                          paidPaymentIds.add(payment.id);
+                                          remainingVenmo -= payment.checkEFTAmount;
+                                        } else {
+                                          partialPaymentId = payment.id;
+                                          partialCoveragePercent = (remainingVenmo / payment.checkEFTAmount) * 100;
+                                          remainingVenmo = 0;
+                                        }
+                                      }
+                                    }
+
+                                    return (
                                   <div>
                                     <table className="w-full text-sm">
                                       <thead>
@@ -455,8 +478,22 @@ export default function PatientsPage() {
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {details.insurancePayments.map(payment => (
-                                          <tr key={payment.id}>
+                                        {details.insurancePayments.map(payment => {
+                                          const isPaid = paidPaymentIds.has(payment.id);
+                                          const isPartial = partialPaymentId === payment.id;
+
+                                          return (
+                                          <tr
+                                            key={payment.id}
+                                            className={isPaid ? 'bg-green-50' : ''}
+                                            style={{
+                                              ...(isPaid ? { borderLeft: '3px solid rgb(34 197 94)' } : {}),
+                                              ...(isPartial ? {
+                                                borderLeft: '3px solid rgb(34 197 94)',
+                                                background: `linear-gradient(to right, rgb(240 253 244) ${partialCoveragePercent}%, transparent ${partialCoveragePercent}%)`
+                                              } : {})
+                                            }}
+                                          >
                                             <td className="px-2 py-1 font-medium text-gray-900">
                                               ${payment.checkEFTAmount.toFixed(2)}
                                             </td>
@@ -489,10 +526,13 @@ export default function PatientsPage() {
                                               </Select>
                                             </td>
                                           </tr>
-                                        ))}
+                                          );
+                                        })}
                                       </tbody>
                                     </table>
                                   </div>
+                                    );
+                                  })()
                                 ) : (
                                   <p className="text-gray-500 text-sm">No insurance payments</p>
                                 )}

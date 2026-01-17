@@ -67,6 +67,7 @@ export default function InsurancePaymentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
 
   // Pagination state
   const [pageSize, setPageSize] = useState<number>(10);
@@ -237,6 +238,7 @@ export default function InsurancePaymentsPage() {
         const totalRecords = newPayments.length;
         let totalCreated = 0;
         let totalUpdated = 0;
+        const newIds: string[] = [];
 
         setImportProgress({ current: 0, total: totalRecords });
 
@@ -253,6 +255,9 @@ export default function InsurancePaymentsPage() {
             const result = await response.json();
             totalCreated += result.created || 0;
             totalUpdated += result.updated || 0;
+            if (result.ids) {
+              newIds.push(...result.ids);
+            }
             setImportProgress({ current: Math.min(i + BATCH_SIZE, totalRecords), total: totalRecords });
           } else {
             const errorData = await response.json().catch(() => ({}));
@@ -263,6 +268,7 @@ export default function InsurancePaymentsPage() {
         }
 
         toast({ title: `Successfully imported ${totalCreated + totalUpdated} payment records (${totalCreated} new, ${totalUpdated} updated)` });
+        setRecentlyAddedIds(new Set(newIds));
         fetchPayments();
       } catch (error) {
         console.error('Error parsing Excel file:', error);
@@ -384,6 +390,9 @@ export default function InsurancePaymentsPage() {
       if (response.ok) {
         const result = await response.json();
         toast({ title: `Successfully added ${result.count} payment(s)` });
+        if (result.ids) {
+          setRecentlyAddedIds(new Set(result.ids));
+        }
         fetchPayments();
         setManualPayments([{ ...emptyPaymentForm }]);
         setShowManualForm(false);
@@ -801,6 +810,10 @@ export default function InsurancePaymentsPage() {
 
       {/* Payments Table */}
       <Card className="animate-fade-in overflow-visible">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900">All Payments</h3>
+          <p className="text-sm text-gray-500">Sorted by most recently added</p>
+        </div>
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -823,7 +836,7 @@ export default function InsurancePaymentsPage() {
                 return (
                   <tr
                     key={payment.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${recentlyAddedIds.has(payment.id) ? 'bg-green-50' : ''}`}
                     onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm">

@@ -465,6 +465,30 @@ export default function PatientDetailsPage() {
   const totalVenmo = venmoPayments.reduce((sum, p) => sum + p.amount, 0);
   const balance = totalInsurance - totalVenmo;
 
+  // Calculate which insurance payments are covered by Venmo payments
+  // Go through sorted insurance payments from top to bottom and mark as paid until Venmo total is exhausted
+  const paidPaymentIds = new Set<string>();
+  let partialPaymentId: string | null = null;
+  let partialCoveragePercent = 0;
+
+  if (totalVenmo > 0) {
+    let remainingVenmo = totalVenmo;
+    for (const payment of sortedInsurancePayments) {
+      if (remainingVenmo <= 0) break;
+
+      if (remainingVenmo >= payment.checkEFTAmount) {
+        // Fully covered
+        paidPaymentIds.add(payment.id);
+        remainingVenmo -= payment.checkEFTAmount;
+      } else {
+        // Partially covered
+        partialPaymentId = payment.id;
+        partialCoveragePercent = (remainingVenmo / payment.checkEFTAmount) * 100;
+        remainingVenmo = 0;
+      }
+    }
+  }
+
   const handleDeleteInsurance = async (id: string) => {
     if (confirm('Are you sure you want to delete this insurance payment?')) {
       try {
@@ -682,8 +706,30 @@ export default function PatientDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedInsurancePayments.map((payment) => (
-                    <tr key={payment.id} className={`hover:bg-gray-50 transition-colors ${selectedPayments.has(payment.id) ? 'bg-blue-50' : ''}`}>
+                  {paginatedInsurancePayments.map((payment) => {
+                    const isPaid = paidPaymentIds.has(payment.id);
+                    const isPartial = partialPaymentId === payment.id;
+
+                    return (
+                    <tr
+                      key={payment.id}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        selectedPayments.has(payment.id)
+                          ? 'bg-blue-50'
+                          : isPaid
+                          ? 'bg-green-50'
+                          : isPartial
+                          ? ''
+                          : ''
+                      }`}
+                      style={{
+                        ...(isPaid ? { borderLeft: '4px solid rgb(34 197 94)' } : {}),
+                        ...(isPartial ? {
+                          borderLeft: '4px solid rgb(34 197 94)',
+                          background: `linear-gradient(to right, rgb(240 253 244) ${partialCoveragePercent}%, transparent ${partialCoveragePercent}%)`
+                        } : {})
+                      }}
+                    >
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <input
                           type="checkbox"
@@ -757,7 +803,8 @@ export default function PatientDetailsPage() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {paginatedInsurancePayments.length === 0 && (
                     <tr>
                       <td colSpan={INSURANCE_COLUMNS.filter(col => isColumnVisible(col.key)).length + 2} className="px-4 py-8 text-center text-gray-500">
