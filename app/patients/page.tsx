@@ -70,14 +70,14 @@ export default function PatientsPage() {
 
   const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <th
-      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none ${className}`}
+      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none ${className}`}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         <span className="flex flex-col">
-          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
-          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </span>
       </div>
     </th>
@@ -267,23 +267,23 @@ export default function PatientsPage() {
 
   const getStatusBadge = (balance: number) => {
     if (balance === 0) {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Paid in Full</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Paid in Full</span>;
     } else if (balance < 0) {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Overpaid</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">Overpaid</span>;
     } else {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Outstanding</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">Outstanding</span>;
     }
   };
 
   if (status === 'loading' || loading) {
-    return <div className="text-center py-8">Loading patients...</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading patients...</div>;
   }
 
   if (status === 'unauthenticated') {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">All Patients</h1>
-        <p className="text-gray-600 mb-6">Please sign in to view patients.</p>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">All Patients</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to view patients.</p>
       </div>
     );
   }
@@ -308,16 +308,16 @@ export default function PatientsPage() {
               placeholder="Search by patient name or member ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Status:</label>
             <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'outstanding' | 'paid' | 'overpaid')}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white dark:bg-gray-800">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="outstanding">Outstanding</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
@@ -330,24 +330,24 @@ export default function PatientsPage() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
-            <p className="text-sm text-gray-600">Total Patients</p>
-            <p className="text-2xl font-bold">{filteredPatients.length}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Patients</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{filteredPatients.length}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-gray-600">Outstanding Balance</p>
-            <p className="text-2xl font-bold text-red-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Outstanding Balance</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
               ${filteredPatients.filter(p => p.balance > 0).reduce((sum, p) => sum + p.balance, 0).toFixed(2)}
             </p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-gray-600">Total Insurance</p>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Insurance</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               ${filteredPatients.reduce((sum, p) => sum + p.totalInsurance, 0).toFixed(2)}
             </p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-gray-600">Total Paid</p>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Paid</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
               ${filteredPatients.reduce((sum, p) => sum + p.totalVenmo, 0).toFixed(2)}
             </p>
           </Card>
@@ -357,7 +357,7 @@ export default function PatientsPage() {
       <Card className="animate-fade-in overflow-visible">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="w-[4%] px-2 py-3"></th>
                 <SortableHeader field="name" className="w-[20%]">Patient Name</SortableHeader>
@@ -365,14 +365,14 @@ export default function PatientsPage() {
                 <SortableHeader field="totalInsurance" className="w-[12%]">Insurance</SortableHeader>
                 <SortableHeader field="totalVenmo" className="w-[12%]">Patient Paid</SortableHeader>
                 <SortableHeader field="balance" className="w-[12%]">Balance</SortableHeader>
-                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="w-[13%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="w-[13%] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {paginatedPatients.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     {searchTerm || filterStatus !== 'all'
                       ? 'No patients match your search or filter criteria.'
                       : 'No patients found. Import insurance payments to get started.'}
@@ -387,9 +387,9 @@ export default function PatientsPage() {
 
                 return (
                   <React.Fragment key={key}>
-                    <tr className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => togglePatientDetails(patient)}>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" onClick={() => togglePatientDetails(patient)}>
                       <td className="px-2 py-4 whitespace-nowrap">
-                        <button className="text-gray-400 hover:text-gray-600 transition-transform">
+                        <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-transform">
                           {isExpanded ? (
                             <ChevronUp className="w-5 h-5" />
                           ) : (
@@ -398,22 +398,22 @@ export default function PatientsPage() {
                         </button>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{patient.name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{patient.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {patient.insuranceCount} insurance, {patient.venmoCount} venmo
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                         {patient.memberID || '-'}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
                         ${patient.totalInsurance.toFixed(2)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
                         ${patient.totalVenmo.toFixed(2)}
                       </td>
                       <td className={`px-4 py-4 whitespace-nowrap text-sm font-semibold ${
-                        patient.balance > 0 ? 'text-red-600' : patient.balance < 0 ? 'text-yellow-600' : 'text-green-600'
+                        patient.balance > 0 ? 'text-red-600 dark:text-red-400' : patient.balance < 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
                       }`}>
                         ${Math.abs(patient.balance).toFixed(2)}
                         {patient.balance < 0 && ' (overpaid)'}
@@ -424,7 +424,7 @@ export default function PatientsPage() {
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <a
                           href={`/patient/${encodeURIComponent(key)}`}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 font-medium"
                           onClick={(e) => e.stopPropagation()}
                         >
                           Details
@@ -433,14 +433,14 @@ export default function PatientsPage() {
                     </tr>
                     {isExpanded && (
                       <tr key={`expanded-${index}`}>
-                        <td colSpan={8} className="px-4 py-4 bg-gray-50">
+                        <td colSpan={8} className="px-4 py-4 bg-gray-50 dark:bg-gray-900">
                           {isLoadingDetails ? (
-                            <div className="text-center py-4 text-gray-500">Loading details...</div>
+                            <div className="text-center py-4 text-gray-500 dark:text-gray-400">Loading details...</div>
                           ) : details ? (
                             <div className="grid grid-cols-2 gap-6">
                               {/* Insurance Payments */}
                               <div>
-                                <h4 className="font-semibold mb-3 text-blue-700">
+                                <h4 className="font-semibold mb-3 text-blue-700 dark:text-blue-400">
                                   Insurance Payments ({details.insurancePayments.length})
                                 </h4>
                                 {details.insurancePayments.length > 0 ? (
@@ -471,10 +471,10 @@ export default function PatientsPage() {
                                     <table className="w-full text-sm">
                                       <thead>
                                         <tr>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Amount</th>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Service Date</th>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Payment Date</th>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Status</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Service Date</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Payment Date</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -485,7 +485,7 @@ export default function PatientsPage() {
                                           return (
                                           <tr
                                             key={payment.id}
-                                            className={isPaid ? 'bg-green-50' : ''}
+                                            className={isPaid ? 'bg-green-50 dark:bg-green-900/30' : ''}
                                             style={{
                                               ...(isPaid ? { borderLeft: '3px solid rgb(34 197 94)' } : {}),
                                               ...(isPartial ? {
@@ -494,13 +494,13 @@ export default function PatientsPage() {
                                               } : {})
                                             }}
                                           >
-                                            <td className="px-2 py-1 font-medium text-gray-900">
+                                            <td className="px-2 py-1 font-medium text-gray-900 dark:text-gray-100">
                                               ${payment.checkEFTAmount.toFixed(2)}
                                             </td>
-                                            <td className="px-2 py-1 text-gray-600">
+                                            <td className="px-2 py-1 text-gray-600 dark:text-gray-400">
                                               {formatServiceDate(payment.datesOfService)}
                                             </td>
-                                            <td className="px-2 py-1 text-gray-600">
+                                            <td className="px-2 py-1 text-gray-600 dark:text-gray-400">
                                               {payment.paymentDate || '-'}
                                             </td>
                                             <td className="px-2 py-1">
@@ -517,7 +517,7 @@ export default function PatientsPage() {
                                                     <ChevronDown className="h-3 w-3" />
                                                   </Badge>
                                                 </SelectTrigger>
-                                                <SelectContent className="bg-white w-[120px]">
+                                                <SelectContent className="bg-white dark:bg-gray-800 w-[120px]">
                                                   <SelectItem value="PENDING">Pending</SelectItem>
                                                   <SelectItem value="RECORDED">Recorded</SelectItem>
                                                   <SelectItem value="NOTIFIED">Notified</SelectItem>
@@ -534,13 +534,13 @@ export default function PatientsPage() {
                                     );
                                   })()
                                 ) : (
-                                  <p className="text-gray-500 text-sm">No insurance payments</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-sm">No insurance payments</p>
                                 )}
                               </div>
 
                               {/* Venmo Payments */}
                               <div>
-                                <h4 className="font-semibold mb-3 text-green-700">
+                                <h4 className="font-semibold mb-3 text-green-700 dark:text-green-400">
                                   Venmo Payments ({details.venmoPayments.length})
                                 </h4>
                                 {details.venmoPayments.length > 0 ? (
@@ -548,21 +548,21 @@ export default function PatientsPage() {
                                     <table className="w-full text-sm">
                                       <thead>
                                         <tr>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Amount</th>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Date</th>
-                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Notes</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Date</th>
+                                          <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Notes</th>
                                         </tr>
                                       </thead>
                                       <tbody>
                                         {details.venmoPayments.map(payment => (
                                           <tr key={payment.id}>
-                                            <td className="px-2 py-1 font-medium text-gray-900">
+                                            <td className="px-2 py-1 font-medium text-gray-900 dark:text-gray-100">
                                               ${payment.amount.toFixed(2)}
                                             </td>
-                                            <td className="px-2 py-1 text-gray-600">
+                                            <td className="px-2 py-1 text-gray-600 dark:text-gray-400">
                                               {payment.date}
                                             </td>
-                                            <td className="px-2 py-1 text-gray-600">
+                                            <td className="px-2 py-1 text-gray-600 dark:text-gray-400">
                                               {payment.notes || '-'}
                                             </td>
                                           </tr>
@@ -571,12 +571,12 @@ export default function PatientsPage() {
                                     </table>
                                   </div>
                                 ) : (
-                                  <p className="text-gray-500 text-sm">No Venmo payments</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-sm">No Venmo payments</p>
                                 )}
                               </div>
                             </div>
                           ) : (
-                            <div className="text-center py-4 text-gray-500">Unable to load details</div>
+                            <div className="text-center py-4 text-gray-500 dark:text-gray-400">Unable to load details</div>
                           )}
                         </td>
                       </tr>
@@ -587,28 +587,28 @@ export default function PatientsPage() {
             </tbody>
           </table>
           </div>
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {filteredPatients.length > 0
                   ? `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, filteredPatients.length)} of ${filteredPatients.length}`
                   : '0 patients'
                 }
                 {(searchTerm || filterStatus !== 'all') && ` (filtered from ${patients.length} total)`}
               </span>
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Outstanding: ${filteredPatients.filter(p => p.balance > 0).reduce((sum, p) => sum + p.balance, 0).toFixed(2)}
               </span>
             </div>
             {/* Pagination Controls */}
             {filteredPatients.length > 10 && (
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Rows per page:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
                   <select
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <option key={size} value={size}>{size}</option>
@@ -619,31 +619,31 @@ export default function PatientsPage() {
                   <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     First
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-600 px-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Last
                   </button>

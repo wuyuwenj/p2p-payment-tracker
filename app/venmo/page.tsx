@@ -63,14 +63,14 @@ export default function VenmoPaymentsPage() {
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th
-      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none"
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         <span className="flex flex-col">
-          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
-          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </span>
       </div>
     </th>
@@ -251,14 +251,14 @@ export default function VenmoPaymentsPage() {
   };
 
   if (status === 'loading' || loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
 
   if (status === 'unauthenticated') {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Venmo Payments</h1>
-        <p className="text-gray-600 mb-6">Please sign in to manage your Venmo payments.</p>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Venmo Payments</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to manage your Venmo payments.</p>
       </div>
     );
   }
@@ -328,11 +328,11 @@ export default function VenmoPaymentsPage() {
         </div>
 
         <Card className="p-6 mb-6 animate-fade-in">
-          <h3 className="font-medium text-gray-900 mb-4">Add Venmo Payment</h3>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Venmo Payment</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Patient Name *
                 </label>
                 <Input
@@ -349,29 +349,29 @@ export default function VenmoPaymentsPage() {
                   placeholder="Start typing to search..."
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {suggestions.map((patient, index) => (
                       <div
                         key={index}
                         onClick={() => selectPatient(patient)}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                       >
-                        <div className="font-medium text-gray-900">{patient.name}</div>
-                        <div className="text-xs text-gray-500">Member ID: {patient.memberId}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{patient.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Member ID: {patient.memberId}</div>
                       </div>
                     ))}
                   </div>
                 )}
                 {showSuggestions && suggestions.length === 0 && patientName.length >= 1 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                    <div className="px-3 py-2 text-sm text-gray-500">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg">
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                       No matching patients found in insurance records
                     </div>
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Member Subscriber ID *
                 </label>
                 <Input
@@ -387,7 +387,7 @@ export default function VenmoPaymentsPage() {
               <>
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Payments</h3>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Payments</h3>
                     <Button
                       type="button"
                       variant="ghost"
@@ -400,7 +400,7 @@ export default function VenmoPaymentsPage() {
                   </div>
 
                   {batchPayments.map((payment, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div key={index} className="grid grid-cols-12 gap-2 mb-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                       <div className="col-span-3">
                         <Input
                           type="number"
@@ -464,7 +464,7 @@ export default function VenmoPaymentsPage() {
               placeholder="Search by patient name or member ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -472,28 +472,28 @@ export default function VenmoPaymentsPage() {
         <Card className="animate-fade-in overflow-visible">
           <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
                   <SortableHeader field="patientName">Patient Name</SortableHeader>
                   <SortableHeader field="memberSubscriberID">Member ID</SortableHeader>
                   <SortableHeader field="amount">Amount</SortableHeader>
                   <SortableHeader field="date">Date</SortableHeader>
                   <SortableHeader field="notes">Notes</SortableHeader>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {paginatedPayments.map((payment) => (
                   <tr
                     key={payment.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                     onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
                   >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{payment.patientName}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.memberSubscriberID}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.amount.toFixed(2)}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.date}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{payment.notes}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{payment.patientName}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.memberSubscriberID}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">${payment.amount.toFixed(2)}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.date}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{payment.notes}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -503,7 +503,7 @@ export default function VenmoPaymentsPage() {
                 ))}
                 {paginatedPayments.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       {searchQuery.trim() ? 'No payments match your search.' : 'No payments recorded. Add your first payment above.'}
                     </td>
                   </tr>
@@ -511,26 +511,26 @@ export default function VenmoPaymentsPage() {
               </tbody>
             </table>
           </div>
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {sortedPayments.length > 0
                   ? `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, sortedPayments.length)} of ${sortedPayments.length}`
                   : '0 payments'
                 }
                 {searchQuery.trim() && ` (filtered from ${payments.length} total)`}
               </span>
-              <span className="text-sm font-semibold text-gray-900">Total: ${total.toFixed(2)}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Total: ${total.toFixed(2)}</span>
             </div>
             {/* Pagination Controls */}
             {sortedPayments.length > 10 && (
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Rows per page:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
                   <select
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <option key={size} value={size}>{size}</option>
@@ -541,31 +541,31 @@ export default function VenmoPaymentsPage() {
                   <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     First
                   </button>
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-600 px-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Last
                   </button>

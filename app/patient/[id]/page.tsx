@@ -159,14 +159,14 @@ export default function PatientDetailsPage() {
 
   const InsuranceSortableHeader = ({ field, children }: { field: InsuranceSortField; children: React.ReactNode }) => (
     <th
-      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none"
       onClick={() => handleInsuranceSort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         <span className="flex flex-col">
-          <ChevronUp className={`w-3 h-3 -mb-1 ${insuranceSortField === field && insuranceSortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
-          <ChevronDown className={`w-3 h-3 ${insuranceSortField === field && insuranceSortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronUp className={`w-3 h-3 -mb-1 ${insuranceSortField === field && insuranceSortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <ChevronDown className={`w-3 h-3 ${insuranceSortField === field && insuranceSortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </span>
       </div>
     </th>
@@ -174,14 +174,14 @@ export default function PatientDetailsPage() {
 
   const VenmoSortableHeader = ({ field, children }: { field: VenmoSortField; children: React.ReactNode }) => (
     <th
-      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none"
       onClick={() => handleVenmoSort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         <span className="flex flex-col">
-          <ChevronUp className={`w-3 h-3 -mb-1 ${venmoSortField === field && venmoSortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
-          <ChevronDown className={`w-3 h-3 ${venmoSortField === field && venmoSortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronUp className={`w-3 h-3 -mb-1 ${venmoSortField === field && venmoSortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <ChevronDown className={`w-3 h-3 ${venmoSortField === field && venmoSortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </span>
       </div>
     </th>
@@ -526,20 +526,20 @@ export default function PatientDetailsPage() {
   };
 
   if (status === 'loading' || loading) {
-    return <div className="text-center py-8">Loading patient details...</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading patient details...</div>;
   }
 
   if (status === 'unauthenticated') {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Patient Details</h1>
-        <p className="text-gray-600 mb-6">Please sign in to view patient details.</p>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Patient Details</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to view patient details.</p>
       </div>
     );
   }
 
   if (!patientInfo) {
-    return <div className="text-center py-8">Patient not found</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Patient not found</div>;
   }
 
   return (
@@ -549,16 +549,16 @@ export default function PatientDetailsPage() {
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center gap-2"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mb-4 flex items-center gap-2"
           >
             &larr; Back
           </button>
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{patientInfo.name}</h1>
-              <p className="text-gray-600">Member ID: {patientInfo.memberID}</p>
+              <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{patientInfo.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400">Member ID: {patientInfo.memberID}</p>
               {insurancePayments[0]?.payeeAddress && (
-                <div className="mt-2 text-sm text-gray-500">
+                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                   {insurancePayments[0].payeeAddress.split(',').map((part, index) => (
                     <p key={index}>{part.trim()}</p>
                   ))}
@@ -566,24 +566,24 @@ export default function PatientDetailsPage() {
               )}
             </div>
             <div className="text-right">
-              <div className="bg-white rounded-lg shadow p-4 mb-2">
-                <p className="text-sm text-gray-500">Total Insurance Payments</p>
-                <p className="text-2xl font-bold text-blue-600">${totalInsurance.toFixed(2)}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Insurance Payments</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalInsurance.toFixed(2)}</p>
               </div>
-              <div className="bg-white rounded-lg shadow p-4 mb-2">
-                <p className="text-sm text-gray-500">Total Patient Paid</p>
-                <p className="text-2xl font-bold text-green-600">${totalVenmo.toFixed(2)}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Patient Paid</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">${totalVenmo.toFixed(2)}</p>
               </div>
               <div className={`rounded-lg shadow p-4 ${
-                balance === 0 ? 'bg-green-50' : balance > 0 ? 'bg-red-50' : 'bg-yellow-50'
+                balance === 0 ? 'bg-green-50 dark:bg-green-900/30' : balance > 0 ? 'bg-red-50 dark:bg-red-900/30' : 'bg-yellow-50 dark:bg-yellow-900/30'
               }`}>
-                <p className="text-sm text-gray-500">Balance</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Balance</p>
                 <p className={`text-2xl font-bold ${
-                  balance === 0 ? 'text-green-600' : balance > 0 ? 'text-red-600' : 'text-yellow-600'
+                  balance === 0 ? 'text-green-600 dark:text-green-400' : balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 }`}>
                   ${Math.abs(balance).toFixed(2)} {balance < 0 && '(overpaid)'}
                 </p>
-                <p className="text-xs mt-1">
+                <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">
                   {balance === 0 ? 'Paid in Full' : balance > 0 ? 'Outstanding' : 'Overpaid'}
                 </p>
               </div>
@@ -593,23 +593,23 @@ export default function PatientDetailsPage() {
 
         {/* Export Help Panel */}
         {showExportHelp && (
-          <Card className="p-6 mb-6 animate-fade-in bg-blue-50 border-blue-200">
+          <Card className="p-6 mb-6 animate-fade-in bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="font-semibold text-blue-800">PDF Export Guide</h3>
+              <h3 className="font-semibold text-blue-800 dark:text-blue-200">PDF Export Guide</h3>
               <button
                 onClick={() => setShowExportHelp(false)}
-                className="text-blue-600 hover:text-blue-800"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="text-sm text-blue-700 space-y-2">
+            <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
               <p><strong>Select specific records:</strong> Use the checkboxes on the left of each row to select only the payments you want to export. The PDF will only include selected records.</p>
               <p><strong>Export all visible:</strong> If no records are selected, all currently visible (filtered) records will be exported.</p>
               <p><strong>Hide columns:</strong> Use the "Columns" button to hide columns you don't want in the PDF export. Hidden columns won't appear in the exported document.</p>
               <p><strong>Filter by status:</strong> Use the status dropdown to filter payments before export. Only filtered payments will be included.</p>
             </div>
-            <p className="text-xs text-blue-600 mt-3">
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
               Tip: The export will respect your current sort order, column visibility, and row selections.
             </p>
           </Card>
@@ -618,7 +618,7 @@ export default function PatientDetailsPage() {
         {/* Insurance Payments Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Insurance Payments</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Insurance Payments</h2>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => setShowExportHelp(!showExportHelp)}>
                 <HelpCircle className="w-4 h-4 mr-2" />
@@ -633,13 +633,13 @@ export default function PatientDetailsPage() {
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-200 rounded-md hover:bg-gray-50">
+                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
                     <Settings2 className="w-4 h-4" />
                     Columns
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[180px]">
-                  <DropdownMenuLabel className="font-semibold text-gray-700">Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuLabel className="font-semibold text-gray-700 dark:text-gray-300">Toggle Columns</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {INSURANCE_COLUMNS.map(col => (
                     <DropdownMenuCheckboxItem
@@ -658,7 +658,7 @@ export default function PatientDetailsPage() {
                     {statusFilter === 'all' ? 'All Statuses' : TRACKING_STATUSES.find(s => s.value === statusFilter)?.label}
                   </span>
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-white dark:bg-gray-800">
                   <SelectItem value="all">All Statuses</SelectItem>
                   {TRACKING_STATUSES.map(status => (
                     <SelectItem key={status.value} value={status.value}>
@@ -667,7 +667,7 @@ export default function PatientDetailsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {statusFilter === 'all'
                   ? `${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
                   : `${filteredInsurancePayments.length} of ${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
@@ -679,7 +679,7 @@ export default function PatientDetailsPage() {
           <Card className="animate-fade-in overflow-visible">
             <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                       <input
@@ -705,7 +705,7 @@ export default function PatientDetailsPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {paginatedInsurancePayments.map((payment) => {
                     const isPaid = paidPaymentIds.has(payment.id);
                     const isPartial = partialPaymentId === payment.id;
@@ -713,7 +713,7 @@ export default function PatientDetailsPage() {
                     return (
                     <tr
                       key={payment.id}
-                      className={`hover:bg-gray-50 transition-colors ${
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                         selectedPayments.has(payment.id)
                           ? 'bg-blue-50'
                           : isPaid
@@ -752,7 +752,7 @@ export default function PatientDetailsPage() {
                                 <ChevronDown className="h-3 w-3" />
                               </Badge>
                             </SelectTrigger>
-                            <SelectContent className="bg-white w-[120px]">
+                            <SelectContent className="bg-white dark:bg-gray-800 w-[120px]">
                               <SelectItem value="PENDING">Pending</SelectItem>
                               <SelectItem value="RECORDED">Recorded</SelectItem>
                               <SelectItem value="NOTIFIED">Notified</SelectItem>
@@ -762,30 +762,30 @@ export default function PatientDetailsPage() {
                         </td>
                       )}
                       {isColumnVisible('patientName') && (
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <TruncatableCell value={payment.payeeName} maxWidth="max-w-[150px]" />
                         </td>
                       )}
                       {isColumnVisible('claimStatus') && (
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <TruncatableCell value={payment.claimStatus} maxWidth="max-w-[100px]" />
                         </td>
                       )}
                       {isColumnVisible('serviceDates') && (
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <TruncatableCell value={formatServiceDate(payment.datesOfService)} maxWidth="max-w-[120px]" />
                         </td>
                       )}
                       {isColumnVisible('provider') && (
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <TruncatableCell value={payment.providerName} maxWidth="max-w-[120px]" />
                         </td>
                       )}
                       {isColumnVisible('paymentDate') && (
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.paymentDate || '-'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.paymentDate || '-'}</td>
                       )}
                       {isColumnVisible('checkNumber') && (
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.checkNumber || '-'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.checkNumber || '-'}</td>
                       )}
                       {isColumnVisible('amount') && (
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
@@ -793,7 +793,7 @@ export default function PatientDetailsPage() {
                         </td>
                       )}
                       {isColumnVisible('address') && (
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <TruncatableCell value={payment.payeeAddress} maxWidth="max-w-[150px]" />
                         </td>
                       )}
@@ -807,7 +807,7 @@ export default function PatientDetailsPage() {
                   })}
                   {paginatedInsurancePayments.length === 0 && (
                     <tr>
-                      <td colSpan={INSURANCE_COLUMNS.filter(col => isColumnVisible(col.key)).length + 2} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={INSURANCE_COLUMNS.filter(col => isColumnVisible(col.key)).length + 2} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         {statusFilter === 'all'
                           ? 'No insurance payments recorded'
                           : `No payments with status "${TRACKING_STATUSES.find(s => s.value === statusFilter)?.label}"`
@@ -818,10 +818,10 @@ export default function PatientDetailsPage() {
                 </tbody>
               </table>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     {selectedPayments.size > 0 ? (
                       <>
                         {selectedPayments.size} selected
@@ -853,11 +853,11 @@ export default function PatientDetailsPage() {
               {sortedInsurancePayments.length > 10 && (
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
                     <select
                       value={insurancePageSize}
                       onChange={(e) => handleInsurancePageSizeChange(Number(e.target.value))}
-                      className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {PAGE_SIZE_OPTIONS.map(size => (
                         <option key={size} value={size}>{size}</option>
@@ -868,31 +868,31 @@ export default function PatientDetailsPage() {
                     <button
                       onClick={() => setInsuranceCurrentPage(1)}
                       disabled={insuranceCurrentPage === 1}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       First
                     </button>
                     <button
                       onClick={() => setInsuranceCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={insuranceCurrentPage === 1}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </button>
-                    <span className="text-sm text-gray-600 px-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
                       Page {insuranceCurrentPage} of {insuranceTotalPages}
                     </span>
                     <button
                       onClick={() => setInsuranceCurrentPage(prev => Math.min(insuranceTotalPages, prev + 1))}
                       disabled={insuranceCurrentPage === insuranceTotalPages}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
                     <button
                       onClick={() => setInsuranceCurrentPage(insuranceTotalPages)}
                       disabled={insuranceCurrentPage === insuranceTotalPages}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Last
                     </button>
@@ -906,8 +906,8 @@ export default function PatientDetailsPage() {
         {/* Venmo Payments Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Venmo Payments</h2>
-            <span className="text-sm text-gray-600">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Venmo Payments</h2>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {venmoPayments.length} payment{venmoPayments.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -915,7 +915,7 @@ export default function PatientDetailsPage() {
           <Card className="animate-fade-in overflow-visible">
             <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
                     <VenmoSortableHeader field="date">Date</VenmoSortableHeader>
                     <VenmoSortableHeader field="amount">Amount</VenmoSortableHeader>
@@ -923,14 +923,14 @@ export default function PatientDetailsPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {paginatedVenmoPayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.date}</td>
+                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.date}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                         ${payment.amount.toFixed(2)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">
+                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                         <TruncatableCell value={payment.notes} maxWidth="max-w-[200px]" />
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
@@ -942,7 +942,7 @@ export default function PatientDetailsPage() {
                   ))}
                   {paginatedVenmoPayments.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         No Venmo payments recorded
                       </td>
                     </tr>
@@ -950,9 +950,9 @@ export default function PatientDetailsPage() {
                 </tbody>
               </table>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {sortedVenmoPayments.length > 0
                     ? `Showing ${((venmoCurrentPage - 1) * venmoPageSize) + 1}-${Math.min(venmoCurrentPage * venmoPageSize, sortedVenmoPayments.length)} of ${sortedVenmoPayments.length}`
                     : `${venmoPayments.length} payment${venmoPayments.length !== 1 ? 's' : ''}`
@@ -964,11 +964,11 @@ export default function PatientDetailsPage() {
               {sortedVenmoPayments.length > 10 && (
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
                     <select
                       value={venmoPageSize}
                       onChange={(e) => handleVenmoPageSizeChange(Number(e.target.value))}
-                      className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {PAGE_SIZE_OPTIONS.map(size => (
                         <option key={size} value={size}>{size}</option>
@@ -979,31 +979,31 @@ export default function PatientDetailsPage() {
                     <button
                       onClick={() => setVenmoCurrentPage(1)}
                       disabled={venmoCurrentPage === 1}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       First
                     </button>
                     <button
                       onClick={() => setVenmoCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={venmoCurrentPage === 1}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </button>
-                    <span className="text-sm text-gray-600 px-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
                       Page {venmoCurrentPage} of {venmoTotalPages}
                     </span>
                     <button
                       onClick={() => setVenmoCurrentPage(prev => Math.min(venmoTotalPages, prev + 1))}
                       disabled={venmoCurrentPage === venmoTotalPages}
-                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
                     <button
                       onClick={() => setVenmoCurrentPage(venmoTotalPages)}
                       disabled={venmoCurrentPage === venmoTotalPages}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Last
                     </button>
@@ -1016,46 +1016,46 @@ export default function PatientDetailsPage() {
 
         {/* Summary Section */}
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Payment Summary</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Payment Summary</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="border-r pr-4">
+            <div className="border-r border-gray-200 dark:border-gray-700 pr-4">
               <div className="mb-3">
-                <p className="text-sm text-gray-600">Total Insurance Received</p>
-                <p className="text-2xl font-bold text-blue-600">${totalInsurance.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">{insurancePayments.length} payment(s)</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Insurance Received</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalInsurance.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{insurancePayments.length} payment(s)</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Patient Paid</p>
-                <p className="text-2xl font-bold text-green-600">${totalVenmo.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">{venmoPayments.length} payment(s)</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Patient Paid</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">${totalVenmo.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{venmoPayments.length} payment(s)</p>
               </div>
             </div>
             <div className="pl-4">
               <div className="mb-3">
-                <p className="text-sm text-gray-600">Outstanding Balance</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Outstanding Balance</p>
                 <p className={`text-3xl font-bold ${
-                  balance === 0 ? 'text-green-600' : balance > 0 ? 'text-red-600' : 'text-yellow-600'
+                  balance === 0 ? 'text-green-600 dark:text-green-400' : balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 }`}>
                   ${Math.abs(balance).toFixed(2)}
                 </p>
-                {balance < 0 && <p className="text-xs text-yellow-600">Patient overpaid by ${Math.abs(balance).toFixed(2)}</p>}
-                {balance > 0 && <p className="text-xs text-red-600">Patient still owes ${balance.toFixed(2)}</p>}
-                {balance === 0 && <p className="text-xs text-green-600">Account is settled</p>}
+                {balance < 0 && <p className="text-xs text-yellow-600 dark:text-yellow-400">Patient overpaid by ${Math.abs(balance).toFixed(2)}</p>}
+                {balance > 0 && <p className="text-xs text-red-600 dark:text-red-400">Patient still owes ${balance.toFixed(2)}</p>}
+                {balance === 0 && <p className="text-xs text-green-600 dark:text-green-400">Account is settled</p>}
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-2">Status</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Status</p>
                 {balance === 0 && (
-                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                     Paid in Full
                   </span>
                 )}
                 {balance > 0 && (
-                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
                     Outstanding Balance
                   </span>
                 )}
                 {balance < 0 && (
-                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
                     Overpaid
                   </span>
                 )}

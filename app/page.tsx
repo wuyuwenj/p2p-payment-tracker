@@ -97,14 +97,14 @@ export default function InsurancePaymentsPage() {
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th
-      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none"
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         <span className="flex flex-col">
-          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`} />
-          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`} />
+          <ChevronUp className={`w-3 h-3 -mb-1 ${sortField === field && sortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
+          <ChevronDown className={`w-3 h-3 ${sortField === field && sortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
         </span>
       </div>
     </th>
@@ -411,7 +411,7 @@ export default function InsurancePaymentsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -420,8 +420,8 @@ export default function InsurancePaymentsPage() {
   if (status === 'unauthenticated') {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Welcome to Insurance Payment Tracker</h1>
-        <p className="text-gray-600 mb-6">Please sign in to manage your insurance payments.</p>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Welcome to Insurance Payment Tracker</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to manage your insurance payments.</p>
       </div>
     );
   }
@@ -489,22 +489,22 @@ export default function InsurancePaymentsPage() {
       {/* Import Loading Overlay */}
       {importing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl min-w-[300px]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl min-w-[300px]">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
             <div className="text-center w-full">
-              <p className="text-lg font-semibold">Importing payments...</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Importing payments...</p>
               {importProgress.total > 0 && (
                 <>
-                  <p className="text-2xl font-bold text-blue-600 mt-2">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">
                     {importProgress.current} / {importProgress.total}
                   </p>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mt-3">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-3">
                     <div
                       className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
                     />
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                     {Math.round((importProgress.current / importProgress.total) * 100)}% complete
                   </p>
                 </>
@@ -524,7 +524,7 @@ export default function InsurancePaymentsPage() {
               <HelpCircle className="w-4 h-4 mr-2" />
               Help
             </Button>
-            <label className={`inline-flex items-center justify-center font-medium rounded-lg transition-colors px-3 py-1.5 text-sm ${importing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-transparent text-gray-700 hover:bg-gray-100 cursor-pointer'}`}>
+            <label className={`inline-flex items-center justify-center font-medium rounded-lg transition-colors px-3 py-1.5 text-sm ${importing ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'}`}>
               {importing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -559,16 +559,16 @@ export default function InsurancePaymentsPage() {
               placeholder="Search by patient name or member ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Status:</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white dark:bg-gray-800">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="RECORDED">Recorded</SelectItem>
@@ -581,62 +581,62 @@ export default function InsurancePaymentsPage() {
 
       {/* Import Help Panel */}
       {showImportHelp && (
-        <Card className="p-6 mb-6 animate-fade-in bg-blue-50 border-blue-200">
+        <Card className="p-6 mb-6 animate-fade-in bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="font-semibold text-blue-800">Excel Import Guide</h3>
+            <h3 className="font-semibold text-blue-800 dark:text-blue-200">Excel Import Guide</h3>
             <button
               onClick={() => setShowImportHelp(false)}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-blue-700 mb-3">
+          <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
             Upload an Excel file (.xlsx or .xls) with insurance payment data. The system will automatically match columns based on the following names:
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Patient/Member Name:</span>
-              <span className="text-gray-600 ml-1">Member Name, Patient Name, Patient</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Patient/Member Name:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Member Name, Patient Name, Patient</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Amount (Priority):</span>
-              <span className="text-gray-600 ml-1">Claim amount paid, Check/EFT amount, Amount</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Amount (Priority):</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Claim amount paid, Check/EFT amount, Amount</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Member ID:</span>
-              <span className="text-gray-600 ml-1">Member Subscriber ID, Member ID, Subscriber ID</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Member ID:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Member Subscriber ID, Member ID, Subscriber ID</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Check Number:</span>
-              <span className="text-gray-600 ml-1">Check/EFT number, Check Number, Check #, EFT Number</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Check Number:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Check/EFT number, Check Number, Check #, EFT Number</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Payment Date:</span>
-              <span className="text-gray-600 ml-1">Payment date, Payment Date</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Payment Date:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Payment date, Payment Date</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Claim Status:</span>
-              <span className="text-gray-600 ml-1">Claim status, Claim Status</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Claim Status:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Claim status, Claim Status</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Amount:</span>
-              <span className="text-gray-600 ml-1">Check/EFT amount, Amount, Payment Amount</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Amount:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Check/EFT amount, Amount, Payment Amount</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Payee Name:</span>
-              <span className="text-gray-600 ml-1">Payee name, Patient Name, Name</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Payee Name:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Payee name, Patient Name, Name</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Claim Number:</span>
-              <span className="text-gray-600 ml-1">Claim number, Claim Number, Claim #</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Claim Number:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Claim number, Claim Number, Claim #</span>
             </div>
-            <div className="bg-white p-2 rounded">
-              <span className="font-medium">Payee Address:</span>
-              <span className="text-gray-600 ml-1">Payee address, Address</span>
+            <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <span className="font-medium text-gray-900 dark:text-gray-100">Payee Address:</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-1">Payee address, Address</span>
             </div>
           </div>
-          <p className="text-xs text-blue-600 mt-3">
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
             Tip: Column matching is case-insensitive. Check your browser console (F12) to see detected columns.
           </p>
         </Card>
@@ -644,14 +644,14 @@ export default function InsurancePaymentsPage() {
 
       {/* Manual Payment Form */}
       <Card className="p-6 mb-6 animate-fade-in">
-        <h3 className="font-medium text-gray-900 mb-4">Add Manual Payment</h3>
+        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Manual Payment</h3>
         <div className="space-y-4">
           {manualPayments.map((row, index) => (
             <div key={index}>
               {/* Payee Name and Member ID Row */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Payee Name *
                   </label>
                   <Input
@@ -669,29 +669,29 @@ export default function InsurancePaymentsPage() {
                     placeholder="Start typing to search..."
                   />
                   {showSuggestions && activeRowIndex === index && suggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {suggestions.map((patient, pIndex) => (
                         <div
                           key={pIndex}
                           onClick={() => selectPatient(index, patient)}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                         >
-                          <div className="font-medium text-gray-900">{patient.name}</div>
-                          <div className="text-xs text-gray-500">Member ID: {patient.memberId}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{patient.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Member ID: {patient.memberId}</div>
                         </div>
                       ))}
                     </div>
                   )}
                   {showSuggestions && activeRowIndex === index && suggestions.length === 0 && row.payeeName.length >= 1 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                      <div className="px-3 py-2 text-sm text-gray-500">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg">
+                      <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                         No matching patients found
                       </div>
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Member ID *
                   </label>
                   <Input
@@ -707,7 +707,7 @@ export default function InsurancePaymentsPage() {
                 <>
                   <div className="grid grid-cols-7 gap-3 items-end">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Claim #
                       </label>
                       <Input
@@ -717,7 +717,7 @@ export default function InsurancePaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Check #
                       </label>
                       <Input
@@ -727,7 +727,7 @@ export default function InsurancePaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Amount *
                       </label>
                       <Input
@@ -739,7 +739,7 @@ export default function InsurancePaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Service Date
                       </label>
                       <Input
@@ -749,7 +749,7 @@ export default function InsurancePaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Payment Date
                       </label>
                       <Input
@@ -759,7 +759,7 @@ export default function InsurancePaymentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Status
                       </label>
                       <Select
@@ -769,7 +769,7 @@ export default function InsurancePaymentsPage() {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white dark:bg-gray-800">
                           {TRACKING_STATUSES.map((status) => (
                             <SelectItem key={status.value} value={status.value}>
                               {status.label}
@@ -810,13 +810,13 @@ export default function InsurancePaymentsPage() {
 
       {/* Payments Table */}
       <Card className="animate-fade-in overflow-visible">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">All Payments</h3>
-          <p className="text-sm text-gray-500">Sorted by most recently added</p>
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">All Payments</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Sorted by most recently added</p>
         </div>
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <SortableHeader field="trackingStatus">Status</SortableHeader>
                 <SortableHeader field="payeeName">Payee Name</SortableHeader>
@@ -826,17 +826,17 @@ export default function InsurancePaymentsPage() {
                 <SortableHeader field="datesOfService">Service Date</SortableHeader>
                 <SortableHeader field="paymentDate">Payment Date</SortableHeader>
                 <SortableHeader field="checkNumber">Check #</SortableHeader>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {paginatedPayments.map((payment) => {
                 const statusConfig = getStatusConfig(payment.trackingStatus);
 
                 return (
                   <tr
                     key={payment.id}
-                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${recentlyAddedIds.has(payment.id) ? 'bg-green-50' : ''}`}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${recentlyAddedIds.has(payment.id) ? 'bg-green-50 dark:bg-green-900/30' : ''}`}
                     onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
@@ -853,7 +853,7 @@ export default function InsurancePaymentsPage() {
                             <ChevronDown className="h-3 w-3" />
                           </Badge>
                         </SelectTrigger>
-                        <SelectContent className="bg-white w-[120px]">
+                        <SelectContent className="bg-white dark:bg-gray-800 w-[120px]">
                           <SelectItem value="PENDING">Pending</SelectItem>
                           <SelectItem value="RECORDED">Recorded</SelectItem>
                           <SelectItem value="NOTIFIED">Notified</SelectItem>
@@ -861,15 +861,15 @@ export default function InsurancePaymentsPage() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{payment.payeeName}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.memberSubscriberID || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.claimNumber || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{payment.payeeName}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.memberSubscriberID || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.claimNumber || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       ${payment.checkEFTAmount.toFixed(2)}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.datesOfService || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.paymentDate || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{payment.checkNumber || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.datesOfService || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.paymentDate || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.checkNumber || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -880,7 +880,7 @@ export default function InsurancePaymentsPage() {
               })}
               {paginatedPayments.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No payments recorded. Add your first payment above.
                   </td>
                 </tr>
@@ -888,26 +888,26 @@ export default function InsurancePaymentsPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {sortedPayments.length > 0
                 ? `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, sortedPayments.length)} of ${sortedPayments.length}`
                 : '0 payments'
               }
               {(statusFilter !== 'all' || searchQuery.trim()) && ` (filtered from ${payments.length} total)`}
             </span>
-            <span className="text-sm font-semibold text-gray-900">Total: ${total.toFixed(2)}</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Total: ${total.toFixed(2)}</span>
           </div>
           {/* Pagination Controls */}
           {sortedPayments.length > 10 && (
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Rows per page:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
                 <select
                   value={pageSize}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
@@ -918,31 +918,31 @@ export default function InsurancePaymentsPage() {
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   First
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-600 px-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Last
                 </button>

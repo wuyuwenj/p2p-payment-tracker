@@ -41,7 +41,7 @@ export function SelectTrigger({ className = '', children, onClick }: SelectTrigg
   const isCustomBadge = className.includes('bg-transparent') && className.includes('[&>svg]:hidden');
   const defaultClasses = isCustomBadge
     ? ''
-    : 'flex items-center justify-between w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500';
+    : 'flex items-center justify-between w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 
   return (
     <button
@@ -83,7 +83,7 @@ export function SelectValue({ placeholder }: { placeholder?: string }) {
     return context.value;
   };
 
-  return <span className="text-sm text-gray-900">{displayValue()}</span>;
+  return <span className="text-sm text-gray-900 dark:text-gray-100">{displayValue()}</span>;
 }
 
 interface SelectContentProps {
@@ -117,7 +117,7 @@ export function SelectContent({ className = '', children }: SelectContentProps) 
   return (
     <div
       ref={ref}
-      className={`absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg flex flex-col min-w-fit ${className}`}
+      className={`absolute top-full left-0 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg flex flex-col min-w-fit ${className}`}
       style={{ zIndex: 9999 }}
     >
       {children}
@@ -144,8 +144,8 @@ export function SelectItem({ value, children, className = '' }: SelectItemProps)
         context.onValueChange(value);
         context.setOpen(false);
       }}
-      className={`w-full px-2 py-1.5 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
-        isSelected ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-900'
+      className={`w-full px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none ${
+        isSelected ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-900 dark:text-gray-100'
       } ${className}`}
     >
       {children}

@@ -108,23 +108,23 @@ export default function ReconciliationPage() {
 
   const getStatusBadge = (balance: number) => {
     if (balance === 0) {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Paid in Full</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Paid in Full</span>;
     } else if (balance < 0) {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Overpaid</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">Overpaid</span>;
     } else {
-      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Outstanding</span>;
+      return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">Outstanding</span>;
     }
   };
 
   if (status === 'loading' || loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
 
   if (status === 'unauthenticated') {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Payment Reconciliation</h1>
-        <p className="text-gray-600 mb-6">Please sign in to view reconciliation data.</p>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Payment Reconciliation</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to view reconciliation data.</p>
       </div>
     );
   }
@@ -132,7 +132,7 @@ export default function ReconciliationPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Payment Reconciliation</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Payment Reconciliation</h1>
         <button
           onClick={loadReconciliationData}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -142,51 +142,51 @@ export default function ReconciliationPage() {
       </div>
 
       {reconciliationData.length === 0 ? (
-        <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-          <p className="text-gray-600 text-lg mb-4">No reconciliation data available</p>
-          <p className="text-gray-500">Add insurance and Venmo payments to see reconciliation</p>
+        <div className="bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">No reconciliation data available</p>
+          <p className="text-gray-500 dark:text-gray-500">Add insurance and Venmo payments to see reconciliation</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Total Patients</h3>
-              <p className="text-2xl font-bold">{reconciliationData.length}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Patients</h3>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{reconciliationData.length}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Total Insurance Payments</h3>
-              <p className="text-2xl font-bold text-blue-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Insurance Payments</h3>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 ${reconciliationData.reduce((sum, r) => sum + r.totalInsuranceAmount, 0).toFixed(2)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Total Patient Payments</h3>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Patient Payments</h3>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 ${reconciliationData.reduce((sum, r) => sum + r.totalPatientPaid, 0).toFixed(2)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Total Outstanding</h3>
-              <p className="text-2xl font-bold text-red-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Outstanding</h3>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                 ${reconciliationData.reduce((sum, r) => sum + Math.max(0, r.balance), 0).toFixed(2)}
               </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Insurance Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Paid</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Member ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patient Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Insurance Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patient Paid</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Balance</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {reconciliationData.map((record) => {
                   const uniqueKey = getUniqueKey(record);
                   return (
@@ -194,17 +194,17 @@ export default function ReconciliationPage() {
                       <td colSpan={7} className="p-0">
                         <table className="w-full">
                           <tbody>
-                            <tr className="hover:bg-gray-50">
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium" style={{width: '14%'}}>{record.memberSubscriberID}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm" style={{width: '14%'}}>{record.patientName}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-blue-600" style={{width: '14%'}}>
+                            <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100" style={{width: '14%'}}>{record.memberSubscriberID}</td>
+                              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300" style={{width: '14%'}}>{record.patientName}</td>
+                              <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400" style={{width: '14%'}}>
                                 ${record.totalInsuranceAmount.toFixed(2)}
                               </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600" style={{width: '14%'}}>
+                              <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400" style={{width: '14%'}}>
                                 ${record.totalPatientPaid.toFixed(2)}
                               </td>
                               <td className={`px-4 py-4 whitespace-nowrap text-sm font-semibold ${
-                                record.balance > 0 ? 'text-red-600' : record.balance < 0 ? 'text-yellow-600' : 'text-green-600'
+                                record.balance > 0 ? 'text-red-600 dark:text-red-400' : record.balance < 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
                               }`} style={{width: '14%'}}>
                                 ${Math.abs(record.balance).toFixed(2)} {record.balance < 0 && '(overpaid)'}
                               </td>
@@ -215,14 +215,14 @@ export default function ReconciliationPage() {
                                 <div className="flex gap-2">
                                   <Link
                                     href={getPatientDetailLink(record)}
-                                    className="text-blue-600 hover:text-blue-900 font-medium"
+                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 font-medium"
                                   >
                                     View Details
                                   </Link>
-                                  <span className="text-gray-300">|</span>
+                                  <span className="text-gray-300 dark:text-gray-600">|</span>
                                   <button
                                     onClick={() => toggleRow(uniqueKey)}
-                                    className="text-gray-600 hover:text-gray-900"
+                                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                                   >
                                     {expandedRow === uniqueKey ? 'Hide' : 'Show'}
                                   </button>
@@ -231,57 +231,57 @@ export default function ReconciliationPage() {
                             </tr>
                             {expandedRow === uniqueKey && (
                               <tr>
-                                <td colSpan={7} className="px-4 py-4 bg-gray-50">
+                                <td colSpan={7} className="px-4 py-4 bg-gray-50 dark:bg-gray-900">
                                   <div className="grid grid-cols-2 gap-4">
                                     {/* Insurance Payments */}
                                     <div>
-                                      <h4 className="font-semibold mb-2 text-blue-700">Insurance Payments ({record.insurancePayments.length})</h4>
+                                      <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-400">Insurance Payments ({record.insurancePayments.length})</h4>
                                       {record.insurancePayments.length > 0 ? (
                                         <div className="space-y-2">
                                           {record.insurancePayments.map(payment => (
-                                            <div key={payment.id} className="bg-white p-3 rounded border border-gray-200 text-sm">
+                                            <div key={payment.id} className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 text-sm">
                                               <div className="grid grid-cols-2 gap-2">
                                                 <div>
-                                                  <span className="font-medium">Amount:</span> ${payment.checkEFTAmount.toFixed(2)}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Amount:</span> <span className="text-gray-700 dark:text-gray-300">${payment.checkEFTAmount.toFixed(2)}</span>
                                                 </div>
                                                 <div>
-                                                  <span className="font-medium">Date:</span> {payment.paymentDate}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Date:</span> <span className="text-gray-700 dark:text-gray-300">{payment.paymentDate}</span>
                                                 </div>
                                                 <div>
-                                                  <span className="font-medium">Check #:</span> {payment.checkNumber}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Check #:</span> <span className="text-gray-700 dark:text-gray-300">{payment.checkNumber}</span>
                                                 </div>
                                                 <div>
-                                                  <span className="font-medium">Status:</span> {payment.claimStatus}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Status:</span> <span className="text-gray-700 dark:text-gray-300">{payment.claimStatus}</span>
                                                 </div>
                                                 <div className="col-span-2">
-                                                  <span className="font-medium">Service Dates:</span> {payment.datesOfService}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Service Dates:</span> <span className="text-gray-700 dark:text-gray-300">{payment.datesOfService}</span>
                                                 </div>
                                               </div>
                                             </div>
                                           ))}
                                         </div>
                                       ) : (
-                                        <p className="text-gray-500 text-sm">No insurance payments</p>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">No insurance payments</p>
                                       )}
                                     </div>
 
                                     {/* Venmo Payments */}
                                     <div>
-                                      <h4 className="font-semibold mb-2 text-green-700">Venmo Payments ({record.venmoPayments.length})</h4>
+                                      <h4 className="font-semibold mb-2 text-green-700 dark:text-green-400">Venmo Payments ({record.venmoPayments.length})</h4>
                                       {record.venmoPayments.length > 0 ? (
                                         <div className="space-y-2">
                                           {record.venmoPayments.map(payment => (
-                                            <div key={payment.id} className="bg-white p-3 rounded border border-gray-200 text-sm">
+                                            <div key={payment.id} className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 text-sm">
                                               <div className="grid grid-cols-2 gap-2">
                                                 <div>
-                                                  <span className="font-medium">Amount:</span> ${payment.amount.toFixed(2)}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Amount:</span> <span className="text-gray-700 dark:text-gray-300">${payment.amount.toFixed(2)}</span>
                                                 </div>
                                                 <div>
-                                                  <span className="font-medium">Date:</span> {payment.date}
+                                                  <span className="font-medium text-gray-900 dark:text-gray-100">Date:</span> <span className="text-gray-700 dark:text-gray-300">{payment.date}</span>
                                                 </div>
                                                 {payment.notes && (
                                                   <div className="col-span-2">
-                                                    <span className="font-medium">Notes:</span> {payment.notes}
+                                                    <span className="font-medium text-gray-900 dark:text-gray-100">Notes:</span> <span className="text-gray-700 dark:text-gray-300">{payment.notes}</span>
                                                   </div>
                                                 )}
                                               </div>
@@ -289,7 +289,7 @@ export default function ReconciliationPage() {
                                           ))}
                                         </div>
                                       ) : (
-                                        <p className="text-gray-500 text-sm">No Venmo payments</p>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">No Venmo payments</p>
                                       )}
                                     </div>
                                   </div>
