@@ -443,7 +443,7 @@ export default function VenmoPaymentsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="sm" onClick={addPaymentRow}>
+                  <Button type="button" variant="ghost" size="sm" onClick={addPaymentRow}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Row
                   </Button>
