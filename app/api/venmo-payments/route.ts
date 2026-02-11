@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
 // GET - Fetch all venmo payments for the authenticated user
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const payments = await prisma.venmoPayment.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     })
 
@@ -38,8 +38,8 @@ export async function GET() {
 // POST - Create new venmo payments (bulk)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get userId and ensure it's a string
-    const userId = session.user.id as string
+    // Get userId
+    const userId = user.id
 
     // Transform and create payments
     const created = await prisma.venmoPayment.createMany({
@@ -80,13 +80,13 @@ export async function POST(request: NextRequest) {
 // DELETE - Clear all venmo payments for the authenticated user
 export async function DELETE() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     await prisma.venmoPayment.deleteMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
     })
 
     return NextResponse.json({ success: true })

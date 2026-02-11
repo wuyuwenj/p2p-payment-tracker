@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { VenmoPayment } from '@/lib/types';
 import { Button } from '@/components/tracker/Button';
 import { Input } from '@/components/tracker/Input';
@@ -16,7 +16,7 @@ interface PatientSuggestion {
 
 export default function VenmoPaymentsPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [payments, setPayments] = useState<VenmoPayment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,13 +77,13 @@ export default function VenmoPaymentsPage() {
   );
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && user) {
       fetchPayments();
       loadPatientSuggestions();
-    } else if (status === 'unauthenticated') {
+    } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [status]);
+  }, [authLoading, user]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -250,11 +250,11 @@ export default function VenmoPaymentsPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Venmo Payments</h1>

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
 // GET - Fetch all insurance payments for the authenticated user
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const payments = await prisma.insurancePayment.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     })
 
@@ -44,8 +44,8 @@ export async function GET() {
 // POST - Create new insurance payments (bulk import)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get userId and ensure it's a string
-    const userId = session.user.id as string
+    const userId = user.id
 
     // Fetch all existing records for this user in one query (optimized)
     const existingPayments = await prisma.insurancePayment.findMany({
@@ -150,13 +150,13 @@ export async function POST(request: NextRequest) {
 // DELETE - Clear all insurance payments for the authenticated user
 export async function DELETE() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     await prisma.insurancePayment.deleteMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
     })
 
     return NextResponse.json({ success: true })

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '@/components/tracker/Card';
 import { Badge } from '@/components/tracker/Badge';
@@ -33,7 +33,7 @@ interface PatientDetails {
 }
 
 export default function PatientsPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [patients, setPatients] = useState<PatientSummary[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<PatientSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,12 +84,12 @@ export default function PatientsPage() {
   );
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && user) {
       loadPatients();
-    } else if (status === 'unauthenticated') {
+    } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [status]);
+  }, [authLoading, user]);
 
   useEffect(() => {
     applyFilters();
@@ -275,11 +275,11 @@ export default function PatientsPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading patients...</div>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">All Patients</h1>

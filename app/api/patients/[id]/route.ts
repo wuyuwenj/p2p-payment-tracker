@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
 // GET - Fetch specific patient data (insurance + venmo payments)
@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -37,14 +37,14 @@ export async function GET(
     const [insurancePayments, venmoPayments] = await Promise.all([
       prisma.insurancePayment.findMany({
         where: {
-          userId: session.user.id,
+          userId: user.id,
           memberSubscriberID: { equals: memberID, mode: "insensitive" },
         },
         orderBy: { createdAt: "desc" },
       }),
       prisma.venmoPayment.findMany({
         where: {
-          userId: session.user.id,
+          userId: user.id,
           memberSubscriberID: { equals: memberID, mode: "insensitive" },
         },
         orderBy: { createdAt: "desc" },

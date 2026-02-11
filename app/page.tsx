@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { Upload, Trash2, HelpCircle, X, ChevronDown, ChevronUp, Plus, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/tracker/Button';
@@ -57,7 +57,7 @@ interface PatientSuggestion {
 
 export default function InsurancePaymentsPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [payments, setPayments] = useState<InsurancePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportHelp, setShowImportHelp] = useState(false);
@@ -118,12 +118,12 @@ export default function InsurancePaymentsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && user) {
       fetchPayments();
-    } else if (status === 'unauthenticated') {
+    } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [status]);
+  }, [authLoading, user]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -197,7 +197,7 @@ export default function InsurancePaymentsPage() {
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         if (jsonData.length > 0) {
-          console.log('Excel columns found:', Object.keys(jsonData[0] as object));
+          console.log('Columns found:', Object.keys(jsonData[0] as object));
         }
 
         const getColumnValue = (row: any, possibleNames: string[]): string => {
@@ -271,7 +271,7 @@ export default function InsurancePaymentsPage() {
         setRecentlyAddedIds(new Set(newIds));
         fetchPayments();
       } catch (error) {
-        console.error('Error parsing Excel file:', error);
+        console.error('Error parsing file:', error);
         toast({ title: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
       } finally {
         setImporting(false);
@@ -406,7 +406,7 @@ export default function InsurancePaymentsPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -417,7 +417,7 @@ export default function InsurancePaymentsPage() {
     );
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Welcome to Insurance Payment Tracker</h1>
@@ -533,12 +533,12 @@ export default function InsurancePaymentsPage() {
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Import Excel
+                  Import File
                 </>
               )}
               <input
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 onChange={handleFileUpload}
                 className="hidden"
                 disabled={importing}
@@ -583,7 +583,7 @@ export default function InsurancePaymentsPage() {
       {showImportHelp && (
         <Card className="p-6 mb-6 animate-fade-in bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="font-semibold text-blue-800 dark:text-blue-200">Excel Import Guide</h3>
+            <h3 className="font-semibold text-blue-800 dark:text-blue-200">Import Guide</h3>
             <button
               onClick={() => setShowImportHelp(false)}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
@@ -592,7 +592,7 @@ export default function InsurancePaymentsPage() {
             </button>
           </div>
           <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-            Upload an Excel file (.xlsx or .xls) with insurance payment data. The system will automatically match columns based on the following names:
+            Upload an Excel (.xlsx, .xls) or CSV (.csv) file with insurance payment data. The system will automatically match columns based on the following names:
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-white dark:bg-gray-800 p-2 rounded">

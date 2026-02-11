@@ -1,22 +1,22 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
 // GET - Fetch aggregated patient data for the authenticated user
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Fetch both payment types
     const [insurancePayments, venmoPayments] = await Promise.all([
       prisma.insurancePayment.findMany({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
       }),
       prisma.venmoPayment.findMany({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
       }),
     ])
 

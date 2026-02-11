@@ -1,23 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { ReconciliationRecord, InsurancePayment, VenmoPayment } from '@/lib/types';
 
 export default function ReconciliationPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [reconciliationData, setReconciliationData] = useState<ReconciliationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && user) {
       loadReconciliationData();
-    } else if (status === 'unauthenticated') {
+    } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [status]);
+  }, [authLoading, user]);
 
   const loadReconciliationData = async () => {
     try {
@@ -116,11 +116,11 @@ export default function ReconciliationPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Payment Reconciliation</h1>

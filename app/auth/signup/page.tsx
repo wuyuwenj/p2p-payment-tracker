@@ -2,34 +2,65 @@
 
 import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
 
-function SignInContent() {
-  const searchParams = useSearchParams()
+function SignUpContent() {
   const router = useRouter()
-  const { signInWithGoogle, signInWithCredentials, loading: authLoading } = useAuth()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
-  const error = searchParams.get("error")
+  const { signUpWithCredentials, signInWithGoogle, signInWithCredentials, loading: authLoading } = useAuth()
 
-  const [usernameOrEmail, setUsernameOrEmail] = useState("")
+  const [username, setUsername] = useState("")
+  const [name, setName] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setErrorMessage("")
+    setSuccessMessage("")
 
-    const { error } = await signInWithCredentials(usernameOrEmail, password)
+    // Validate username format
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+    if (!usernameRegex.test(username)) {
+      setErrorMessage("Username must be 3-20 characters and contain only letters, numbers, and underscores")
+      setLoading(false)
+      return
+    }
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match")
+      setLoading(false)
+      return
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters")
+      setLoading(false)
+      return
+    }
+
+    const { error } = await signUpWithCredentials(password, username, name)
 
     if (error) {
-      setErrorMessage(error.message || "Invalid username or password")
+      setErrorMessage(error.message || "Failed to create account")
       setLoading(false)
     } else {
-      router.push(callbackUrl)
+      // Auto sign in after successful signup
+      const signInResult = await signInWithCredentials(username, password)
+      if (signInResult.error) {
+        setSuccessMessage("Account created! You can now sign in.")
+        setTimeout(() => router.push('/auth/signin'), 1500)
+      } else {
+        router.push('/')
+      }
+      setLoading(false)
     }
   }
 
@@ -38,38 +69,57 @@ function SignInContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sign In</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Create Account</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Insurance Payment Tracker
           </p>
         </div>
 
-        {(error || errorMessage) && (
+        {errorMessage && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
-            {error === "OAuthAccountNotLinked"
-              ? "This email is already associated with another account."
-              : error === "AuthCallbackError"
-              ? "There was an error during sign in. Please try again."
-              : errorMessage || "An error occurred during sign in."}
+            {errorMessage}
           </div>
         )}
 
-        <form onSubmit={handleSignIn} className="space-y-4">
+        {successMessage && (
+          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded">
+            {successMessage}
+          </div>
+        )}
+
+        <form onSubmit={handleSignUp} className="space-y-4">
           <div>
-            <label htmlFor="usernameOrEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Username
             </label>
             <input
-              id="usernameOrEmail"
+              id="username"
               type="text"
-              value={usernameOrEmail}
-              onChange={(e) => setUsernameOrEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="johndoe"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              3-20 characters, letters, numbers, and underscores only
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Display Name <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="John Doe"
             />
           </div>
 
@@ -86,6 +136,24 @@ function SignInContent() {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
             />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Minimum 6 characters
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+            />
           </div>
 
           <button
@@ -93,7 +161,7 @@ function SignInContent() {
             disabled={loading || authLoading}
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 
@@ -132,9 +200,9 @@ function SignInContent() {
         </button>
 
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-          Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+            Sign in
           </Link>
         </p>
       </div>
@@ -142,14 +210,14 @@ function SignInContent() {
   )
 }
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     }>
-      <SignInContent />
+      <SignUpContent />
     </Suspense>
   )
 }

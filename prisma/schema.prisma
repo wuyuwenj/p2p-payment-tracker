@@ -11,6 +11,7 @@ datasource db {
 model User {
   id                 String              @id @default(uuid())
   email              String              @unique
+  username           String?             @unique
   name               String?
   image              String?
   emailVerified      DateTime?           @map("email_verified")

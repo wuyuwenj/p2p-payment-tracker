@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDown, ChevronUp, Trash2, Copy, Check, Settings2, Download, HelpCircle, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -80,7 +80,7 @@ function TruncatableCell({ value, maxWidth = 'max-w-[150px]' }: { value: string 
 }
 
 export default function PatientDetailsPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
@@ -194,12 +194,12 @@ export default function PatientDetailsPage() {
   const isColumnVisible = (key: ColumnKey) => visibleColumns[key];
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && user) {
       loadPatientData();
-    } else if (status === 'unauthenticated') {
+    } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [status, patientId]);
+  }, [authLoading, user, patientId]);
 
   // Reset page to 1 when filter or sort changes
   useEffect(() => {
@@ -525,11 +525,11 @@ export default function PatientDetailsPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading patient details...</div>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Patient Details</h1>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 import { TrackingStatus } from "@prisma/client"
 
@@ -9,8 +9,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -27,7 +27,7 @@ export async function PATCH(
     const payment = await prisma.insurancePayment.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
     })
 
@@ -59,8 +59,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -70,7 +70,7 @@ export async function DELETE(
     const payment = await prisma.insurancePayment.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
     })
 
