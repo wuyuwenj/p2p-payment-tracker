@@ -7,6 +7,7 @@ import { VenmoPayment } from '@/lib/types';
 import { Button } from '@/components/tracker/Button';
 import { Input } from '@/components/tracker/Input';
 import { Card } from '@/components/tracker/Card';
+import { VenmoCsvUpload } from '@/components/tracker/VenmoCsvUpload';
 import { Trash2, Plus, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface PatientSuggestion {
@@ -250,6 +251,33 @@ export default function VenmoPaymentsPage() {
     }
   };
 
+  const handleCsvImport = async (parsedPayments: Array<{
+    patientName: string;
+    memberSubscriberID?: string;
+    amount: number;
+    date: string;
+    notes: string;
+  }>) => {
+    try {
+      const response = await fetch('/api/venmo-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payments: parsedPayments }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully imported ${result.count} payment(s) from CSV`);
+        fetchPayments();
+      } else {
+        alert('Error importing CSV payments');
+      }
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Error importing CSV payments');
+    }
+  };
+
   if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
@@ -327,8 +355,15 @@ export default function VenmoPaymentsPage() {
           </div>
         </div>
 
+        <div className="mb-6">
+          <VenmoCsvUpload
+            existingPatients={allPatients}
+            onImportComplete={handleCsvImport}
+          />
+        </div>
+
         <Card className="p-6 mb-6 animate-fade-in">
-          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Venmo Payment</h3>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Venmo Payment Manually</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="relative">
