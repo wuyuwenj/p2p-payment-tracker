@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase-server"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
@@ -38,16 +38,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create user in Supabase Auth
-    const supabase = await createClient()
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Create user via Supabase Admin API (skips email confirmation)
+    const supabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          username: username.toLowerCase(),
-          name: name || username,
-        },
+      email_confirm: true,
+      user_metadata: {
+        username: username.toLowerCase(),
+        name: name || username,
       },
     })
 
@@ -84,12 +87,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Account created successfully",
-      needsEmailVerification: !authData.user.email_confirmed_at,
     })
   } catch (error) {
     console.error("Registration error:", error)
+    const message = error instanceof Error ? error.message : "Failed to create account"
     return NextResponse.json(
-      { error: "Failed to create account" },
+      { error: message },
       { status: 500 }
     )
   }
