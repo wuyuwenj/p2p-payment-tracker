@@ -64,13 +64,13 @@ export async function POST(request: NextRequest) {
     // Fetch all existing records for this user in one query (optimized)
     const existingPayments = await prisma.insurancePayment.findMany({
       where: { userId },
-      select: { id: true, memberSubscriberID: true, datesOfService: true, checkNumber: true },
+      select: { id: true, payeeName: true, memberSubscriberID: true, datesOfService: true, checkNumber: true, paymentDate: true },
     })
 
-    // Create a map for fast lookup: key = memberSubscriberID|datesOfService|checkNumber
+    // Create a map for fast lookup: key = payeeName|memberSubscriberID|datesOfService|checkNumber|paymentDate
     const existingMap = new Map<string, string>()
     existingPayments.forEach(p => {
-      const key = `${p.memberSubscriberID}|${p.datesOfService || ''}|${p.checkNumber || ''}`
+      const key = `${p.payeeName}|${p.memberSubscriberID}|${p.datesOfService || ''}|${p.checkNumber || ''}|${p.paymentDate || ''}`
       existingMap.set(key, p.id)
     })
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         payeeAddress: p.payeeAddress || null,
       }
 
-      const key = `${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}|${paymentData.checkNumber || ''}`
+      const key = `${paymentData.payeeName}|${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}|${paymentData.checkNumber || ''}|${paymentData.paymentDate || ''}`
       const existingId = existingMap.get(key)
 
       if (existingId && existingId !== 'pending') {
@@ -147,9 +147,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Clear all insurance payments for the authenticated user
+// DELETE - Clear all insurance payments for the authenticated user (dev only)
 export async function DELETE() {
   try {
+    if (process.env.NODE_ENV !== "development") {
+      return NextResponse.json({ error: "Bulk delete is only available in development" }, { status: 403 })
+    }
+
     const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

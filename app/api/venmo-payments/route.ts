@@ -77,9 +77,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Clear all venmo payments for the authenticated user
+// DELETE - Clear all venmo payments for the authenticated user (dev only)
 export async function DELETE() {
   try {
+    if (process.env.NODE_ENV !== "development") {
+      return NextResponse.json({ error: "Bulk delete is only available in development" }, { status: 403 })
+    }
+
     const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

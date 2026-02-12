@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Patients</title>
+</head>
+<body>
+
+  <div>
+    <!-- Page Header -->
+    <header>
+      <h1>All Patients</h1>
+      <p>View patient balances and payment history</p>
+    </header>
+
+    <!-- Search + Filter -->
+    <div>
+      <input type="text" placeholder="Search by patient name or member ID...">
+      <div>
+        <label>Filter by Status:</label>
+        <select>
+          <option value="all">All Statuses</option>
+          <option value="outstanding">Outstanding</option>
+          <option value="paid">Paid</option>
+          <option value="overpaid">Overpaid</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div id="stats">
+      <div>
+        <p>Total Patients</p>
+        <p><strong>24</strong></p>
+      </div>
+      <div>
+        <p>Outstanding Balance</p>
+        <p><strong>$12,450.00</strong></p>
+      </div>
+      <div>
+        <p>Total Insurance</p>
+        <p><strong>$45,000.00</strong></p>
+      </div>
+      <div>
+        <p>Total Paid</p>
+        <p><strong>$32,550.00</strong></p>
+      </div>
+    </div>
+
+    <!-- Patient Table -->
+    <section>
+      <table>
+        <thead>
+          <tr>
+            <th></th><!-- expand/collapse toggle -->
+            <th>Patient Name</th>
+            <th>Member ID</th>
+            <th>Insurance</th>
+            <th>Patient Paid</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Patient row -->
+          <tr>
+            <td><button type="button">V (expand)</button></td>
+            <td>
+              <div>
+                <strong>John Doe</strong>
+                <small>3 insurance, 2 venmo</small>
+              </div>
+            </td>
+            <td>ABC123456</td>
+            <td>$1,500.00</td>
+            <td>$1,200.00</td>
+            <td>$300.00</td>
+            <td><span>Outstanding</span></td>
+            <td><a href="patient-detail.html">Details</a></td>
+          </tr>
+
+          <!-- Expanded detail row (shown when row is expanded) -->
+          <tr id="expanded-detail" hidden>
+            <td colspan="8">
+              <div>
+                <!-- Insurance Payments sub-table -->
+                <section>
+                  <h4>Insurance Payments (3)</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Amount</th>
+                        <th>Service Date</th>
+                        <th>Payment Date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>$500.00</td>
+                        <td>01/15/2025</td>
+                        <td>02/01/2025</td>
+                        <td>
+                          <select>
+                            <option value="PENDING">Pending</option>
+                            <option value="RECORDED">Recorded</option>
+                            <option value="NOTIFIED" selected>Notified</option>
+                            <option value="COLLECTED">Collected</option>
+                          </select>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+
+                <!-- Venmo Payments sub-table -->
+                <section>
+                  <h4>Venmo Payments (2)</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>$600.00</td>
+                        <td>2025-02-05</td>
+                        <td>February payment</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+              </div>
+            </td>
+          </tr>
+          <!-- /end expanded row -->
+
+          <!-- Empty state -->
+          <!--
+          <tr>
+            <td colspan="8">No patients found. Import insurance payments to get started.</td>
+          </tr>
+          -->
+        </tbody>
+      </table>
+
+      <!-- Table Footer -->
+      <footer>
+        <div>
+          <span>Showing 1-10 of 24</span>
+          <span>Outstanding: $12,450.00</span>
+        </div>
+
+        <!-- Pagination -->
+        <div>
+          <label>Rows per page:
+            <select>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <nav>
+            <button type="button">First</button>
+            <button type="button">Previous</button>
+            <span>Page 1 of 3</span>
+            <button type="button">Next</button>
+            <button type="button">Last</button>
+          </nav>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+</body>
+</html>

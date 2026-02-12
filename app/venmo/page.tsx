@@ -114,11 +114,14 @@ export default function VenmoPaymentsPage() {
         const uniquePatients = new Map<string, PatientSuggestion>();
 
         insurancePayments.forEach((payment: any) => {
-          const key = `${payment.memberSubscriberID}|||${payment.payeeName}`.toLowerCase();
-          if (!uniquePatients.has(key) && payment.payeeName && payment.memberSubscriberID) {
+          if (!payment.payeeName) return;
+          const key = payment.payeeName.toLowerCase().trim();
+          const existing = uniquePatients.get(key);
+          // Keep entry with a member ID if available
+          if (!existing || (!existing.memberId && payment.memberSubscriberID)) {
             uniquePatients.set(key, {
               name: payment.payeeName,
-              memberId: payment.memberSubscriberID,
+              memberId: payment.memberSubscriberID || '',
             });
           }
         });
@@ -347,12 +350,14 @@ export default function VenmoPaymentsPage() {
             <h1 className="text-3xl font-bold text-foreground">Venmo Payments</h1>
             <p className="text-muted-foreground mt-1">Record patient payments via Venmo</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={handleClearAll}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear All
-            </Button>
-          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="flex gap-2">
+              <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mb-6">
@@ -522,7 +527,7 @@ export default function VenmoPaymentsPage() {
                   <tr
                     key={payment.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
+                    onClick={() => router.push(`/patient/${encodeURIComponent(`${payment.memberSubscriberID || ''}|||${payment.patientName}`)}`)}
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{payment.patientName}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.memberSubscriberID}</td>

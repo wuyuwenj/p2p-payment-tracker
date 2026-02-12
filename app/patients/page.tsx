@@ -453,7 +453,8 @@ export default function PatientsPage() {
 
                                     if (totalVenmo > 0) {
                                       let remainingVenmo = totalVenmo;
-                                      for (const payment of details.insurancePayments) {
+                                      const oldestFirst = [...details.insurancePayments].reverse();
+                                      for (const payment of oldestFirst) {
                                         if (remainingVenmo <= 0) break;
                                         if (remainingVenmo >= payment.checkEFTAmount) {
                                           paidPaymentIds.add(payment.id);

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venmo Payments</title>
+</head>
+<body>
+
+  <div>
+    <!-- Page Header -->
+    <header>
+      <div>
+        <h1>Venmo Payments</h1>
+        <p>Record patient payments via Venmo</p>
+      </div>
+      <div>
+        <button type="button">Clear All</button>
+      </div>
+    </header>
+
+    <!-- CSV Import Section -->
+    <section id="csv-import">
+      <h3>Import Venmo CSV</h3>
+
+      <!-- Stage 1: File Upload -->
+      <div id="csv-upload-stage">
+        <p>Upload a Venmo Account Statement CSV. Only completed payments you received will be imported.</p>
+
+        <div>
+          <label>
+            Choose Venmo CSV file
+            <input type="file" accept=".csv">
+          </label>
+          <button type="button">Parse CSV</button>
+        </div>
+
+        <!-- Error display -->
+        <div id="csv-error" hidden>
+          <p>Error message here</p>
+        </div>
+
+        <details>
+          <summary><strong>How to export from Venmo:</strong></summary>
+          <ol>
+            <li>Log in to Venmo on the web (venmo.com)</li>
+            <li>Go to Statements &amp; History</li>
+            <li>Select the date range and click Download CSV</li>
+            <li>Upload the Account Statement CSV file here</li>
+          </ol>
+          <p>Supports Venmo Account Statement CSV format. Only completed payments with positive amounts are imported.</p>
+        </details>
+      </div>
+
+      <!-- Stage 2: Mapping UI (shown after CSV is parsed) -->
+      <div id="csv-mapping-stage" hidden>
+        <header>
+          <div>
+            <p>Found 5 payment(s) from 3 person(s)</p>
+            <p>Map Venmo usernames to patients in your system</p>
+          </div>
+          <button type="button">X (cancel)</button>
+        </header>
+
+        <!-- Unmapped warning -->
+        <div id="unmapped-warning">
+          <p>2 person(s) not mapped. They will be skipped during import.</p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Venmo User</th>
+              <th>Amount</th>
+              <th>Patient Name</th>
+              <th>Member ID</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- One row per unique Venmo payer -->
+            <tr>
+              <td>
+                <div>
+                  <strong>Ru Zhao</strong>
+                  <small>2 payments</small>
+                </div>
+              </td>
+              <td>$1,071.28</td>
+              <td>
+                <input type="text" list="patients-0" placeholder="Select or type patient name">
+                <datalist id="patients-0">
+                  <option value="Patient Name 1">
+                  <option value="Patient Name 2">
+                </datalist>
+              </td>
+              <td>
+                <input type="text" placeholder="Member ID">
+              </td>
+              <td>[check icon] or [alert icon]</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <footer>
+          <div>
+            <strong>3</strong> payment(s) ready to import
+            <span>($2,331.28)</span>
+          </div>
+          <div>
+            <button type="button">Cancel</button>
+            <button type="button">Import 3 Payments</button>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Manual Entry Form -->
+    <section>
+      <h3>Add Venmo Payment Manually</h3>
+      <form>
+        <div>
+          <label>Patient Name *
+            <input type="text" placeholder="Start typing to search..." required>
+          </label>
+          <!-- Autocomplete dropdown -->
+          <ul id="patient-suggestions">
+            <li>
+              <strong>John Doe</strong>
+              <small>Member ID: ABC123</small>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <label>Member Subscriber ID *
+            <input type="text" required>
+          </label>
+        </div>
+
+        <!-- Payment rows (shown after patient name is entered) -->
+        <section id="payment-rows">
+          <header>
+            <h4>Payments</h4>
+            <button type="button">+ Add Row</button>
+          </header>
+
+          <!-- Repeat for each payment row -->
+          <fieldset>
+            <label>
+              <input type="number" step="0.01" placeholder="Amount *" required>
+            </label>
+            <label>
+              <input type="date" placeholder="Date *" required>
+            </label>
+            <label>
+              <input type="text" placeholder="Notes (optional)">
+            </label>
+            <button type="button">Remove</button>
+          </fieldset>
+          <!-- /end payment row -->
+
+          <div>
+            <button type="button">+ Add Row</button>
+            <button type="submit">Save All</button>
+          </div>
+        </section>
+      </form>
+    </section>
+
+    <!-- Search -->
+    <div>
+      <input type="text" placeholder="Search by patient name or member ID...">
+    </div>
+
+    <!-- Payments Table -->
+    <section>
+      <table>
+        <thead>
+          <tr>
+            <th>Patient Name</th>
+            <th>Member ID</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>John Doe</td>
+            <td>ABC123456</td>
+            <td>$500.00</td>
+            <td>2025-12-07</td>
+            <td>December payment</td>
+            <td><button type="button">Delete</button></td>
+          </tr>
+          <!-- Empty state -->
+          <!--
+          <tr>
+            <td colspan="6">No payments recorded. Add your first payment above.</td>
+          </tr>
+          -->
+        </tbody>
+      </table>
+
+      <!-- Table Footer -->
+      <footer>
+        <div>
+          <span>Showing 1-10 of 15</span>
+          <span>Total: $3,500.00</span>
+        </div>
+
+        <!-- Pagination -->
+        <div>
+          <label>Rows per page:
+            <select>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <nav>
+            <button type="button">First</button>
+            <button type="button">Previous</button>
+            <span>Page 1 of 2</span>
+            <button type="button">Next</button>
+            <button type="button">Last</button>
+          </nav>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+</body>
+</html>

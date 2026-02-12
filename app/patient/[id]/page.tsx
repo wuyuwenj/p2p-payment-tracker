@@ -466,22 +466,21 @@ export default function PatientDetailsPage() {
   const balance = totalInsurance - totalVenmo;
 
   // Calculate which insurance payments are covered by Venmo payments
-  // Go through sorted insurance payments from top to bottom and mark as paid until Venmo total is exhausted
+  // Start from oldest records first (oldest debts settled first)
   const paidPaymentIds = new Set<string>();
   let partialPaymentId: string | null = null;
   let partialCoveragePercent = 0;
 
   if (totalVenmo > 0) {
     let remainingVenmo = totalVenmo;
-    for (const payment of sortedInsurancePayments) {
+    const oldestFirst = [...sortedInsurancePayments].reverse();
+    for (const payment of oldestFirst) {
       if (remainingVenmo <= 0) break;
 
       if (remainingVenmo >= payment.checkEFTAmount) {
-        // Fully covered
         paidPaymentIds.add(payment.id);
         remainingVenmo -= payment.checkEFTAmount;
       } else {
-        // Partially covered
         partialPaymentId = payment.id;
         partialCoveragePercent = (remainingVenmo / payment.checkEFTAmount) * 100;
         remainingVenmo = 0;

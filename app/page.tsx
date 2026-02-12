@@ -140,11 +140,13 @@ export default function InsurancePaymentsPage() {
         // Build unique patient list for autocomplete
         const uniquePatients = new Map<string, PatientSuggestion>();
         data.forEach((payment: InsurancePayment) => {
-          const key = `${payment.memberSubscriberID}|||${payment.payeeName}`.toLowerCase();
-          if (!uniquePatients.has(key) && payment.payeeName && payment.memberSubscriberID) {
+          if (!payment.payeeName) return;
+          const key = payment.payeeName.toLowerCase().trim();
+          const existing = uniquePatients.get(key);
+          if (!existing || (!existing.memberId && payment.memberSubscriberID)) {
             uniquePatients.set(key, {
               name: payment.payeeName,
-              memberId: payment.memberSubscriberID,
+              memberId: payment.memberSubscriberID || '',
             });
           }
         });
@@ -191,43 +193,67 @@ export default function InsurancePaymentsPage() {
     reader.onload = async (event) => {
       try {
         const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { dateNF: 'mm/dd/yyyy' });
 
         if (jsonData.length > 0) {
           console.log('Columns found:', Object.keys(jsonData[0] as object));
         }
 
+        const formatValue = (val: unknown): string => {
+          if (val instanceof Date) {
+            const m = String(val.getMonth() + 1).padStart(2, '0');
+            const d = String(val.getDate()).padStart(2, '0');
+            return `${m}/${d}/${val.getFullYear()}`;
+          }
+          return String(val);
+        };
+
         const getColumnValue = (row: any, possibleNames: string[]): string => {
           for (const name of possibleNames) {
             if (row[name] !== undefined && row[name] !== null) {
-              return String(row[name]);
+              return formatValue(row[name]);
             }
           }
           const rowKeys = Object.keys(row);
           for (const name of possibleNames) {
             const found = rowKeys.find(k => k.toLowerCase() === name.toLowerCase());
             if (found && row[found] !== undefined && row[found] !== null) {
-              return String(row[found]);
+              return formatValue(row[found]);
             }
           }
           return '';
         };
 
         const newPayments = jsonData.map((row: any) => ({
-          claimStatus: getColumnValue(row, ['Claim status', 'Claim Status', 'ClaimStatus']),
+          claimStatus: getColumnValue(row, ['Claim status', 'Claim Status', 'ClaimStatus', 'Reasons']),
           datesOfService: getColumnValue(row, ['Dates of service', 'Dates of Service', 'DatesOfService', 'Service Date', 'Service Dates']),
           memberSubscriberID: getColumnValue(row, ['Member nbscriber ID', 'Member Subscriber ID', 'Member subscriber ID', 'MemberSubscriberID', 'Member ID', 'MemberID', 'Subscriber ID']),
-          providerName: getColumnValue(row, ['Provider name', 'Provider Name', 'ProviderName', 'Provider']),
-          paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate']),
+          providerName: getColumnValue(row, ['Provider name', 'Provider Name', 'ProviderName', 'Provider', 'Doctor Name']),
+          paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate', 'Record Date']),
           claimNumber: getColumnValue(row, ['Claim number', 'Claim Number', 'ClaimNumber', 'Claim #', 'Claim#']),
           checkNumber: getColumnValue(row, ['Check/EFT number', 'Check/EFT Number', 'Chumber', 'Check Number', 'Check number', 'CheckNumber', 'Check #', 'Check#', 'EFT Number']),
-          checkEFTAmount: parseFloat(getColumnValue(row, ['Claim amount paid', 'Claim Amount Paid', 'ClaimAmountPaid', 'Check/EFT amount', 'Check/EFT Amount', 'CheckEFTAmount', 'Amount', 'Payment Amount'])) || 0,
+          checkEFTAmount: parseFloat(getColumnValue(row, ['Claim amount paid', 'Claim Amount Paid', 'ClaimAmountPaid', 'Check/EFT amount', 'Check/EFT Amount', 'CheckEFTAmount', 'Amount', 'Payment Amount']).replace(/[$,]/g, '')) || 0,
           payeeName: getColumnValue(row, ['Member Name', 'Member name', 'MemberName', 'Patient Name', 'Patient name', 'PatientName', 'Patient']),
           payeeAddress: getColumnValue(row, ['Payee address', 'Payee Address', 'PayeeAddress', 'Address']),
-        }));
+        })).filter(p => p.payeeName && p.datesOfService && p.paymentDate);
+
+        // Merge member IDs: if the same patient name has records with and without a member ID,
+        // fill in the missing ones from the record that has it
+        const nameToMemberId = new Map<string, string>();
+        newPayments.forEach(p => {
+          if (p.memberSubscriberID) {
+            nameToMemberId.set(p.payeeName.toLowerCase().trim(), p.memberSubscriberID);
+          }
+        });
+        newPayments.forEach(p => {
+          if (!p.memberSubscriberID) {
+            const memberId = nameToMemberId.get(p.payeeName.toLowerCase().trim());
+            if (memberId) p.memberSubscriberID = memberId;
+          }
+        });
 
         if (newPayments.length > 0) {
           console.log('First payment to import:', newPayments[0]);
@@ -544,10 +570,12 @@ export default function InsurancePaymentsPage() {
                 disabled={importing}
               />
             </label>
-            <Button variant="destructive" size="sm" onClick={handleClearAll}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear All
-            </Button>
+            {process.env.NODE_ENV === 'development' && (
+              <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All
+              </Button>
+            )}
           </div>
         </div>
 
@@ -837,8 +865,7 @@ export default function InsurancePaymentsPage() {
                   <tr
                     key={payment.id}
                     className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${recentlyAddedIds.has(payment.id) ? 'bg-green-50 dark:bg-green-900/30' : ''}`}
-                    onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
-                  >
+                    onClick={() => router.push(`/patient/${encodeURIComponent(`${payment.memberSubscriberID || ''}|||${payment.payeeName}`)}`)}>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <Select
                         value={payment.trackingStatus}

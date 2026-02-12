@@ -1,9 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './Button';
 import { Card } from './Card';
-import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle, AlertCircle, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+
+/** Parse a CSV line into fields, handling quoted values, empty fields, and embedded commas. */
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        fields.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
 
 interface VenmoTransaction {
   datetime: string;
@@ -13,6 +47,8 @@ interface VenmoTransaction {
   from: string;
   to: string;
   amount: number;
+  direction: 'received' | 'sent';
+  counterparty: string;
   id?: string;
 }
 
@@ -37,6 +73,21 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
   const [parsedTransactions, setParsedTransactions] = useState<VenmoTransaction[]>([]);
   const [showMapping, setShowMapping] = useState(false);
   const [mappings, setMappings] = useState<Map<string, { name: string; memberId: string }>>(new Map());
+  const [expandedPayers, setExpandedPayers] = useState<Set<string>>(new Set());
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [searchQueries, setSearchQueries] = useState<Map<string, string>>(new Map());
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -58,84 +109,141 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
 
     try {
       const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
+      const lines = text.split('\n');
+
       if (lines.length < 2) {
         throw new Error('CSV file appears to be empty');
       }
 
-      // Parse header to find column indices
-      const header = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
-      
-      const dateIndex = header.findIndex(h => h.includes('datetime') || h.includes('date'));
-      const typeIndex = header.findIndex(h => h.includes('type'));
-      const statusIndex = header.findIndex(h => h.includes('status'));
-      const noteIndex = header.findIndex(h => h.includes('note'));
-      const fromIndex = header.findIndex(h => h.includes('from'));
-      const toIndex = header.findIndex(h => h.includes('to'));
-      const amountIndex = header.findIndex(h => 
-        (h.includes('amount') && !h.includes('fee') && !h.includes('tax')) || h.includes('total')
-      );
+      // Find the column header row (contains "ID", "Datetime", "Type")
+      let headerRowIndex = -1;
+      let header: string[] = [];
 
-      if (dateIndex === -1 || amountIndex === -1) {
-        throw new Error('Could not find required columns (Date and Amount) in CSV');
+      for (let i = 0; i < lines.length; i++) {
+        const fields = parseCsvLine(lines[i]);
+        const normalized = fields.map(f => f.replace(/"/g, '').trim().toLowerCase());
+
+        if (normalized.some(f => f === 'id') &&
+            normalized.some(f => f === 'datetime') &&
+            normalized.some(f => f === 'type')) {
+          headerRowIndex = i;
+          header = fields.map(f => f.replace(/"/g, '').trim().toLowerCase());
+          break;
+        }
       }
 
-      // Parse transactions (skip header)
-      const transactions: VenmoTransaction[] = [];
-      for (let i = 1; i < lines.length; i++) {
+      if (headerRowIndex === -1) {
+        throw new Error(
+          'Could not find column headers in CSV. Expected columns: ID, Datetime, Type. ' +
+          'Make sure this is a Venmo Account Statement CSV export.'
+        );
+      }
+
+      // Find column indices with exact matching
+      const idIndex = header.findIndex(h => h === 'id');
+      const dateIndex = header.findIndex(h => h === 'datetime');
+      const typeIndex = header.findIndex(h => h === 'type');
+      const statusIndex = header.findIndex(h => h === 'status');
+      const noteIndex = header.findIndex(h => h === 'note');
+      const fromIndex = header.findIndex(h => h === 'from');
+      const toIndex = header.findIndex(h => h === 'to');
+      const amountIndex = header.findIndex(h => h === 'amount (total)');
+
+      if (dateIndex === -1 || amountIndex === -1) {
+        throw new Error('Could not find required columns (Datetime and Amount (total)) in CSV');
+      }
+
+      // Parse transaction rows (start after header)
+      const allTransactions: VenmoTransaction[] = [];
+      const ownerCandidates = new Map<string, number>();
+
+      for (let i = headerRowIndex + 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
 
-        // Handle quoted CSV values
-        const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
-        
-        if (values.length < header.length) continue;
+        const values = parseCsvLine(line);
 
-        const type = typeIndex !== -1 ? values[typeIndex] : '';
-        const status = statusIndex !== -1 ? values[statusIndex] : '';
-        const amountStr = values[amountIndex];
-        
-        // Skip charges (we only want payments received)
-        if (type.toLowerCase().includes('charge') || type.toLowerCase() === 'payment' && amountStr.startsWith('-')) {
-          continue;
-        }
+        // Skip rows without a numeric ID (balance summary rows, footer rows)
+        const rowId = idIndex !== -1 && idIndex < values.length ? values[idIndex] : '';
+        if (!rowId || !/^\d+$/.test(rowId.trim())) continue;
 
-        // Only include completed transactions
-        if (status && !status.toLowerCase().includes('complete')) {
-          continue;
-        }
+        const type = typeIndex !== -1 && typeIndex < values.length ? values[typeIndex].trim() : '';
+        const status = statusIndex !== -1 && statusIndex < values.length ? values[statusIndex].trim() : '';
+        const fromVal = fromIndex !== -1 && fromIndex < values.length ? values[fromIndex].trim() : '';
+        const toVal = toIndex !== -1 && toIndex < values.length ? values[toIndex].trim() : '';
+        const amountStr = amountIndex < values.length ? values[amountIndex].trim() : '';
+        const note = noteIndex !== -1 && noteIndex < values.length ? values[noteIndex].trim() : '';
+        const datetime = dateIndex < values.length ? values[dateIndex].trim() : '';
+
+        // Only import "Payment" type with "Complete" status
+        if (type.toLowerCase() !== 'payment') continue;
+        if (status.toLowerCase() !== 'complete') continue;
 
         const amount = parseFloat(amountStr.replace(/[$,\s+]/g, ''));
-        if (isNaN(amount) || amount <= 0) continue;
+        if (isNaN(amount)) continue;
 
-        transactions.push({
-          datetime: values[dateIndex],
-          type: type,
-          status: status,
-          note: noteIndex !== -1 ? values[noteIndex] : '',
-          from: fromIndex !== -1 ? values[fromIndex] : '',
-          to: toIndex !== -1 ? values[toIndex] : '',
-          amount: amount
+        const direction: 'received' | 'sent' = amount >= 0 ? 'received' : 'sent';
+
+        // Track name frequency to detect account owner
+        if (fromVal) ownerCandidates.set(fromVal, (ownerCandidates.get(fromVal) || 0) + 1);
+        if (toVal) ownerCandidates.set(toVal, (ownerCandidates.get(toVal) || 0) + 1);
+
+        allTransactions.push({
+          datetime,
+          type,
+          status,
+          note,
+          from: fromVal,
+          to: toVal,
+          amount: Math.abs(amount),
+          direction,
+          counterparty: '', // filled after owner detection
+          id: rowId,
         });
       }
 
+      // Detect account owner (name appearing most frequently across all Payment rows)
+      let accountOwner = '';
+      if (ownerCandidates.size > 0) {
+        accountOwner = [...ownerCandidates.entries()]
+          .sort((a, b) => b[1] - a[1])[0][0];
+      }
+
+      // Set counterparty on each transaction
+      for (const tx of allTransactions) {
+        if (tx.direction === 'received') {
+          tx.counterparty = tx.from === accountOwner ? tx.to : tx.from;
+        } else {
+          tx.counterparty = tx.to === accountOwner ? tx.from : tx.to;
+        }
+        if (!tx.counterparty) {
+          tx.counterparty = tx.from === accountOwner ? tx.to : tx.from;
+        }
+      }
+
+      // Only import received payments
+      const transactions = allTransactions.filter(tx => tx.direction === 'received');
+
       if (transactions.length === 0) {
-        throw new Error('No valid payment transactions found in CSV (only completed payments are imported)');
+        throw new Error(
+          `No received payment transactions found in CSV. ` +
+          `Found ${allTransactions.length} total Payment row(s), but none with positive amounts. ` +
+          `Only completed payments you received are imported.`
+        );
       }
 
       setParsedTransactions(transactions);
       setShowMapping(true);
-      
+
       // Auto-map known patient names
       const autoMappings = new Map<string, { name: string; memberId: string }>();
       transactions.forEach(tx => {
-        const fromName = tx.from.toLowerCase().trim();
-        const match = existingPatients.find(p => 
-          p.name.toLowerCase().includes(fromName) || fromName.includes(p.name.toLowerCase())
+        const counterpartyName = tx.counterparty.toLowerCase().trim();
+        const match = existingPatients.find(p =>
+          p.name.toLowerCase().includes(counterpartyName) || counterpartyName.includes(p.name.toLowerCase())
         );
         if (match) {
-          autoMappings.set(tx.from, { name: match.name, memberId: match.memberId });
+          autoMappings.set(tx.counterparty, { name: match.name, memberId: match.memberId });
         }
       });
       setMappings(autoMappings);
@@ -150,7 +258,7 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
 
   const handleMapping = (venmoName: string, patientName: string, memberId: string) => {
     const newMappings = new Map(mappings);
-    if (patientName && memberId) {
+    if (patientName) {
       newMappings.set(venmoName, { name: patientName, memberId });
     } else {
       newMappings.delete(venmoName);
@@ -158,25 +266,45 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
     setMappings(newMappings);
   };
 
+  const dismissTransaction = (txId: string) => {
+    setParsedTransactions(prev => prev.filter(tx => tx.id !== txId));
+  };
+
+  const dismissPayer = (venmoName: string) => {
+    setParsedTransactions(prev => prev.filter(tx => tx.counterparty !== venmoName));
+    const newMappings = new Map(mappings);
+    newMappings.delete(venmoName);
+    setMappings(newMappings);
+  };
+
+  const toggleExpanded = (venmoName: string) => {
+    setExpandedPayers(prev => {
+      const next = new Set(prev);
+      if (next.has(venmoName)) next.delete(venmoName);
+      else next.add(venmoName);
+      return next;
+    });
+  };
+
   const handleImport = () => {
     const payments: ParsedPayment[] = parsedTransactions
-      .filter(tx => mappings.has(tx.from))
+      .filter(tx => mappings.has(tx.counterparty))
       .map(tx => {
-        const mapping = mappings.get(tx.from)!;
-        
+        const mapping = mappings.get(tx.counterparty)!;
+
         // Parse Venmo date format (e.g., "2024-01-15T10:30:00")
         let dateStr = tx.datetime;
         if (dateStr.includes('T')) {
           dateStr = dateStr.split('T')[0];
         }
-        
+
         return {
           patientName: mapping.name,
           memberSubscriberID: mapping.memberId,
           amount: tx.amount,
           date: dateStr,
-          notes: tx.note || `Venmo from ${tx.from}`,
-          rawFrom: tx.from
+          notes: tx.note || `Venmo from ${tx.counterparty}`,
+          rawFrom: tx.counterparty
         };
       });
 
@@ -198,10 +326,10 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
   };
 
   // Get unique payers from transactions
-  const uniquePayers = Array.from(new Set(parsedTransactions.map(tx => tx.from)));
+  const uniquePayers = Array.from(new Set(parsedTransactions.map(tx => tx.counterparty)));
   const unmappedCount = uniquePayers.filter(name => !mappings.has(name)).length;
   const totalAmount = parsedTransactions
-    .filter(tx => mappings.has(tx.from))
+    .filter(tx => mappings.has(tx.counterparty))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
@@ -215,7 +343,7 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
         {!showMapping ? (
           <>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Upload a Venmo transaction CSV export. Only completed payments received will be imported.
+              Upload a Venmo Account Statement CSV. Only completed payments you received will be imported.
             </p>
 
             <div className="flex flex-col gap-3">
@@ -255,13 +383,16 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
             </div>
 
             <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p>📝 <strong>How to export from Venmo:</strong></p>
+              <p><strong>How to export from Venmo:</strong></p>
               <ol className="list-decimal list-inside space-y-1 ml-2">
-                <li>Open Venmo on web or app</li>
-                <li>Go to Settings → Privacy → Download My Venmo Data</li>
-                <li>Wait for email with download link</li>
-                <li>Extract and upload the transactions CSV</li>
+                <li>Log in to Venmo on the web (venmo.com)</li>
+                <li>Go to Statements &amp; History</li>
+                <li>Select the date range and click Download CSV</li>
+                <li>Upload the Account Statement CSV file here</li>
               </ol>
+              <p className="mt-1 text-gray-400 dark:text-gray-500">
+                Supports Venmo Account Statement CSV format. Only completed payments with positive amounts are imported.
+              </p>
             </div>
           </>
         ) : (
@@ -294,77 +425,166 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium">Venmo User</th>
+                      <th className="px-3 py-2 text-left font-medium w-6"></th>
+                      <th className="px-3 py-2 text-left font-medium">Venmo Name</th>
                       <th className="px-3 py-2 text-left font-medium">Amount</th>
                       <th className="px-3 py-2 text-left font-medium">Patient Name</th>
                       <th className="px-3 py-2 text-left font-medium">Member ID</th>
                       <th className="px-3 py-2 text-center font-medium">Status</th>
+                      <th className="px-3 py-2 text-center font-medium w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700">
                     {uniquePayers.map((venmoName, idx) => {
-                      const txCount = parsedTransactions.filter(tx => tx.from === venmoName).length;
-                      const txTotal = parsedTransactions
-                        .filter(tx => tx.from === venmoName)
-                        .reduce((sum, tx) => sum + tx.amount, 0);
+                      const payerTxs = parsedTransactions.filter(tx => tx.counterparty === venmoName);
+                      const txCount = payerTxs.length;
+                      const txTotal = payerTxs.reduce((sum, tx) => sum + tx.amount, 0);
                       const mapping = mappings.get(venmoName);
                       const isMapped = !!mapping;
+                      const isExpanded = expandedPayers.has(venmoName);
 
                       return (
-                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-3 py-2">
-                            <div>
-                              <div className="font-medium">{venmoName}</div>
-                              <div className="text-xs text-gray-500">
-                                {txCount} payment{txCount > 1 ? 's' : ''}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 font-mono text-green-600 dark:text-green-400">
-                            ${txTotal.toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              list={`patients-${idx}`}
-                              placeholder="Select or type patient name"
-                              value={mapping?.name || ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                const match = existingPatients.find(p => p.name === value);
-                                if (match) {
-                                  handleMapping(venmoName, match.name, match.memberId);
-                                } else {
-                                  handleMapping(venmoName, value, mapping?.memberId || '');
+                        <React.Fragment key={idx}>
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(venmoName)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              >
+                                {isExpanded
+                                  ? <ChevronDown className="w-4 h-4" />
+                                  : <ChevronRight className="w-4 h-4" />
                                 }
-                              }}
-                              className="w-full px-2 py-1 text-sm border dark:border-gray-600 rounded focus:ring-2 focus:ring-green-500 dark:bg-gray-800"
-                            />
-                            <datalist id={`patients-${idx}`}>
-                              {existingPatients.map(p => (
-                                <option key={p.memberId} value={p.name} />
-                              ))}
-                            </datalist>
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              placeholder="Member ID"
-                              value={mapping?.memberId || ''}
-                              onChange={(e) => {
-                                handleMapping(venmoName, mapping?.name || '', e.target.value);
-                              }}
-                              className="w-full px-2 py-1 text-sm font-mono border dark:border-gray-600 rounded focus:ring-2 focus:ring-green-500 dark:bg-gray-800"
-                            />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {isMapped ? (
-                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-gray-400 mx-auto" />
-                            )}
-                          </td>
-                        </tr>
+                              </button>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div>
+                                <div className="font-medium">{venmoName}</div>
+                                <div className="text-xs text-gray-500">
+                                  {txCount} payment{txCount > 1 ? 's' : ''}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 font-mono text-green-600 dark:text-green-400">
+                              ${txTotal.toFixed(2)}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="relative" ref={activeDropdown === venmoName ? dropdownRef : undefined}>
+                                <input
+                                  type="text"
+                                  placeholder="Select or type patient name"
+                                  value={activeDropdown === venmoName ? (searchQueries.get(venmoName) ?? mapping?.name ?? '') : (mapping?.name || '')}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setSearchQueries(prev => new Map(prev).set(venmoName, value));
+                                    setActiveDropdown(venmoName);
+                                    // If typed value exactly matches a patient, auto-map
+                                    const match = existingPatients.find(p => p.name === value);
+                                    if (match) {
+                                      handleMapping(venmoName, match.name, match.memberId);
+                                    } else {
+                                      handleMapping(venmoName, value, mapping?.memberId || '');
+                                    }
+                                  }}
+                                  onFocus={() => {
+                                    setActiveDropdown(venmoName);
+                                    if (!searchQueries.has(venmoName)) {
+                                      setSearchQueries(prev => new Map(prev).set(venmoName, mapping?.name || ''));
+                                    }
+                                  }}
+                                  className="w-full px-2 py-1 text-sm border dark:border-gray-600 rounded focus:ring-2 focus:ring-green-500 dark:bg-gray-800"
+                                />
+                                {activeDropdown === venmoName && (() => {
+                                  const query = (searchQueries.get(venmoName) || '').toLowerCase();
+                                  const seen = new Set<string>();
+                                  const filtered = existingPatients.filter(p => {
+                                    const nameKey = p.name.toLowerCase().trim();
+                                    if (seen.has(nameKey)) return false;
+                                    if (!nameKey.includes(query) && !p.memberId.toLowerCase().includes(query)) return false;
+                                    seen.add(nameKey);
+                                    return true;
+                                  });
+                                  return filtered.length > 0 ? (
+                                    <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                      {filtered.map((p, i) => (
+                                        <div
+                                          key={`${p.name}-${p.memberId}-${i}`}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleMapping(venmoName, p.name, p.memberId);
+                                            setActiveDropdown(null);
+                                            setSearchQueries(prev => { const next = new Map(prev); next.delete(venmoName); return next; });
+                                          }}
+                                          className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        >
+                                          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{p.name}</div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-400">Member ID: {p.memberId}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                placeholder="Member ID"
+                                value={mapping?.memberId || ''}
+                                onChange={(e) => {
+                                  handleMapping(venmoName, mapping?.name || '', e.target.value);
+                                }}
+                                className="w-full px-2 py-1 text-sm font-mono border dark:border-gray-600 rounded focus:ring-2 focus:ring-green-500 dark:bg-gray-800"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {isMapped ? (
+                                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto" />
+                              ) : (
+                                <AlertCircle className="w-5 h-5 text-gray-400 mx-auto" />
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => dismissPayer(venmoName)}
+                                className="text-red-400 hover:text-red-600 dark:hover:text-red-400"
+                                title="Dismiss all payments from this person"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && payerTxs.map((tx) => (
+                            <tr key={tx.id} className="bg-gray-50/50 dark:bg-gray-800/30">
+                              <td className="px-3 py-1.5"></td>
+                              <td className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                ID: {tx.id}
+                              </td>
+                              <td className="px-3 py-1.5 text-xs font-mono text-gray-600 dark:text-gray-400">
+                                ${tx.amount.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                {tx.datetime?.split('T')[0] || tx.datetime}
+                              </td>
+                              <td className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]" title={tx.note}>
+                                {tx.note || '—'}
+                              </td>
+                              <td className="px-3 py-1.5"></td>
+                              <td className="px-3 py-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => dismissTransaction(tx.id!)}
+                                  className="text-red-300 hover:text-red-500 dark:hover:text-red-400"
+                                  title="Remove this transaction"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -373,7 +593,7 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
 
               <div className="flex items-center justify-between pt-2">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <strong>{parsedTransactions.filter(tx => mappings.has(tx.from)).length}</strong> payment(s) ready to import
+                  <strong>{parsedTransactions.filter(tx => mappings.has(tx.counterparty)).length}</strong> payment(s) ready to import
                   <span className="ml-2 font-mono text-green-600 dark:text-green-400">
                     (${totalAmount.toFixed(2)})
                   </span>
@@ -386,7 +606,7 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
                     onClick={handleImport}
                     disabled={mappings.size === 0}
                   >
-                    Import {mappings.size > 0 && `${parsedTransactions.filter(tx => mappings.has(tx.from)).length} Payments`}
+                    Import {mappings.size > 0 && `${parsedTransactions.filter(tx => mappings.has(tx.counterparty)).length} Payments`}
                   </Button>
                 </div>
               </div>
