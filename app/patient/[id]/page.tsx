@@ -212,7 +212,7 @@ export default function PatientDetailsPage() {
 
   const loadPatientData = async () => {
     try {
-      const response = await fetch(`/api/patients/${patientId}`);
+      const response = await fetch(`/api/patients/${encodeURIComponent(patientId)}`);
       if (response.ok) {
         const data = await response.json();
         setPatientInfo(data.patientInfo);
