@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account</title>
+</head>
+<body>
+
+  <div>
+    <div>
+      <h1>Create Account</h1>
+      <p>Insurance Payment Tracker</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="error-alert" hidden>
+      <p>Error message here</p>
+    </div>
+
+    <!-- Success Alert -->
+    <div id="success-alert" hidden>
+      <p>Account created! You can now sign in.</p>
+    </div>
+
+    <form>
+      <div>
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="johndoe" required>
+        <p>3-20 characters, letters, numbers, and underscores only</p>
+      </div>
+
+      <div>
+        <label for="name">Display Name <span>(optional)</span></label>
+        <input id="name" type="text" placeholder="John Doe">
+      </div>
+
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="********" required>
+        <p>Minimum 6 characters</p>
+      </div>
+
+      <div>
+        <label for="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password" placeholder="********" required>
+      </div>
+
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <hr>
+    <p>Or continue with</p>
+
+    <button type="button">
+      <!-- Google icon SVG placeholder -->
+      Continue with Google
+    </button>
+
+    <p>Already have an account? <a href="signin.html">Sign in</a></p>
+  </div>
+
+</body>
+</html>

@@ -35,10 +35,12 @@ export async function GET() {
 
     // Process insurance payments first (these typically have the canonical name format)
     insurancePayments.forEach((payment) => {
-      const key = payment.memberSubscriberID.toLowerCase()
+      const key = payment.memberSubscriberID
+        ? payment.memberSubscriberID.toLowerCase()
+        : `name:${payment.payeeName.toLowerCase()}`
       if (!patientMap.has(key)) {
         patientMap.set(key, {
-          memberID: payment.memberSubscriberID,
+          memberID: payment.memberSubscriberID || '',
           name: payment.payeeName,
           totalInsurance: 0,
           totalVenmo: 0,
@@ -53,10 +55,12 @@ export async function GET() {
 
     // Process Venmo payments (link to existing patient by memberID, or create new if not found)
     venmoPayments.forEach((payment) => {
-      const key = payment.memberSubscriberID.toLowerCase()
+      const key = payment.memberSubscriberID
+        ? payment.memberSubscriberID.toLowerCase()
+        : `name:${payment.patientName.toLowerCase()}`
       if (!patientMap.has(key)) {
         patientMap.set(key, {
-          memberID: payment.memberSubscriberID,
+          memberID: payment.memberSubscriberID || '',
           name: payment.patientName,
           totalInsurance: 0,
           totalVenmo: 0,
@@ -68,6 +72,27 @@ export async function GET() {
       patient.totalVenmo += Number(payment.amount)
       patient.venmoCount++
     })
+
+    // Merge name-only entries into member ID entries for the same patient name
+    const nameToKey = new Map<string, string>()
+    for (const [key, patient] of patientMap) {
+      if (patient.memberID) {
+        nameToKey.set(patient.name.toLowerCase().trim(), key)
+      }
+    }
+    for (const [key, patient] of patientMap) {
+      if (!patient.memberID) {
+        const targetKey = nameToKey.get(patient.name.toLowerCase().trim())
+        if (targetKey && patientMap.has(targetKey)) {
+          const target = patientMap.get(targetKey)!
+          target.totalInsurance += patient.totalInsurance
+          target.totalVenmo += patient.totalVenmo
+          target.insuranceCount += patient.insuranceCount
+          target.venmoCount += patient.venmoCount
+          patientMap.delete(key)
+        }
+      }
+    }
 
     // Calculate balances and format output
     const patients = Array.from(patientMap.values()).map((p) => ({

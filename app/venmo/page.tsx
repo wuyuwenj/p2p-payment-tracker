@@ -7,6 +7,7 @@ import { VenmoPayment } from '@/lib/types';
 import { Button } from '@/components/tracker/Button';
 import { Input } from '@/components/tracker/Input';
 import { Card } from '@/components/tracker/Card';
+import { VenmoCsvUpload } from '@/components/tracker/VenmoCsvUpload';
 import { Trash2, Plus, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface PatientSuggestion {
@@ -113,11 +114,14 @@ export default function VenmoPaymentsPage() {
         const uniquePatients = new Map<string, PatientSuggestion>();
 
         insurancePayments.forEach((payment: any) => {
-          const key = `${payment.memberSubscriberID}|||${payment.payeeName}`.toLowerCase();
-          if (!uniquePatients.has(key) && payment.payeeName && payment.memberSubscriberID) {
+          if (!payment.payeeName) return;
+          const key = payment.payeeName.toLowerCase().trim();
+          const existing = uniquePatients.get(key);
+          // Keep entry with a member ID if available
+          if (!existing || (!existing.memberId && payment.memberSubscriberID)) {
             uniquePatients.set(key, {
               name: payment.payeeName,
-              memberId: payment.memberSubscriberID,
+              memberId: payment.memberSubscriberID || '',
             });
           }
         });
@@ -250,6 +254,33 @@ export default function VenmoPaymentsPage() {
     }
   };
 
+  const handleCsvImport = async (parsedPayments: Array<{
+    patientName: string;
+    memberSubscriberID?: string;
+    amount: number;
+    date: string;
+    notes: string;
+  }>) => {
+    try {
+      const response = await fetch('/api/venmo-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payments: parsedPayments }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully imported ${result.count} payment(s) from CSV`);
+        fetchPayments();
+      } else {
+        alert('Error importing CSV payments');
+      }
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Error importing CSV payments');
+    }
+  };
+
   if (authLoading || loading) {
     return <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading...</div>;
   }
@@ -319,16 +350,25 @@ export default function VenmoPaymentsPage() {
             <h1 className="text-3xl font-bold text-foreground">Venmo Payments</h1>
             <p className="text-muted-foreground mt-1">Record patient payments via Venmo</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={handleClearAll}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear All
-            </Button>
-          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="flex gap-2">
+              <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="mb-6">
+          <VenmoCsvUpload
+            existingPatients={allPatients}
+            onImportComplete={handleCsvImport}
+          />
         </div>
 
         <Card className="p-6 mb-6 animate-fade-in">
-          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Venmo Payment</h3>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Add Venmo Payment Manually</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="relative">
@@ -487,7 +527,7 @@ export default function VenmoPaymentsPage() {
                   <tr
                     key={payment.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/patient/${encodeURIComponent(payment.memberSubscriberID)}`)}
+                    onClick={() => router.push(`/patient/${encodeURIComponent(`${payment.memberSubscriberID || ''}|||${payment.patientName}`)}`)}
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{payment.patientName}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.memberSubscriberID}</td>

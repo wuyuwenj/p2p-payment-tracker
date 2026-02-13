@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Reconciliation</title>
+</head>
+<body>
+
+  <div>
+    <!-- Page Header -->
+    <header>
+      <h1>Payment Reconciliation</h1>
+      <button type="button">Refresh Data</button>
+    </header>
+
+    <!-- Empty State -->
+    <!--
+    <div>
+      <p>No reconciliation data available</p>
+      <p>Add insurance and Venmo payments to see reconciliation</p>
+    </div>
+    -->
+
+    <!-- Stats Cards -->
+    <div id="stats">
+      <div>
+        <h3>Total Patients</h3>
+        <p><strong>24</strong></p>
+      </div>
+      <div>
+        <h3>Total Insurance Payments</h3>
+        <p><strong>$45,000.00</strong></p>
+      </div>
+      <div>
+        <h3>Total Patient Payments</h3>
+        <p><strong>$32,550.00</strong></p>
+      </div>
+      <div>
+        <h3>Total Outstanding</h3>
+        <p><strong>$12,450.00</strong></p>
+      </div>
+    </div>
+
+    <!-- Reconciliation Table -->
+    <section>
+      <table>
+        <thead>
+          <tr>
+            <th>Member ID</th>
+            <th>Patient Name</th>
+            <th>Insurance Amount</th>
+            <th>Patient Paid</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Patient row -->
+          <tr>
+            <td>ABC123456</td>
+            <td>John Doe</td>
+            <td>$1,500.00</td>
+            <td>$1,200.00</td>
+            <td>$300.00</td>
+            <td><span>Outstanding</span></td>
+            <td>
+              <a href="patient-detail.html">View Details</a>
+              <span>|</span>
+              <button type="button">Show</button>
+            </td>
+          </tr>
+
+          <!-- Expanded details row (shown when "Show" is clicked) -->
+          <tr id="expanded-reconciliation" hidden>
+            <td colspan="7">
+              <div>
+                <!-- Insurance Payments -->
+                <section>
+                  <h4>Insurance Payments (3)</h4>
+                  <div>
+                    <div>
+                      <p><strong>Amount:</strong> $500.00</p>
+                      <p><strong>Date:</strong> 02/01/2025</p>
+                      <p><strong>Check #:</strong> CHK-789</p>
+                      <p><strong>Status:</strong> Processed</p>
+                      <p><strong>Service Dates:</strong> 01/15/2025</p>
+                    </div>
+                    <!-- Repeat for each payment -->
+                  </div>
+                </section>
+
+                <!-- Venmo Payments -->
+                <section>
+                  <h4>Venmo Payments (2)</h4>
+                  <div>
+                    <div>
+                      <p><strong>Amount:</strong> $600.00</p>
+                      <p><strong>Date:</strong> 2025-02-05</p>
+                      <p><strong>Notes:</strong> February payment</p>
+                    </div>
+                    <!-- Repeat for each payment -->
+                  </div>
+                </section>
+              </div>
+            </td>
+          </tr>
+          <!-- /end expanded row -->
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+</body>
+</html>

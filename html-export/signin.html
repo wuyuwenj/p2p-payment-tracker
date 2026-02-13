@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In</title>
+</head>
+<body>
+
+  <div>
+    <div>
+      <h1>Sign In</h1>
+      <p>Insurance Payment Tracker</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="error-alert" hidden>
+      <p>Invalid username or password</p>
+    </div>
+
+    <form>
+      <div>
+        <label for="usernameOrEmail">Username</label>
+        <input id="usernameOrEmail" type="text" placeholder="johndoe" required>
+      </div>
+
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="********" required>
+      </div>
+
+      <button type="submit">Sign In</button>
+    </form>
+
+    <hr>
+    <p>Or continue with</p>
+
+    <button type="button">
+      <!-- Google icon SVG placeholder -->
+      Continue with Google
+    </button>
+
+    <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+  </div>
+
+</body>
+</html>

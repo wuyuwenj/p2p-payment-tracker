@@ -14,44 +14,94 @@ export async function GET(
     }
 
     const { id } = await params
-    // Decode the patient ID (format: memberID|||patientName or just memberID for backwards compat)
+    // Decode the patient ID (format: memberID|||patientName or just memberID)
     const decoded = decodeURIComponent(id)
     const separatorIndex = decoded.indexOf("|||")
 
-    // Support both old format (memberID|||name) and new format (just memberID)
-    const memberID = separatorIndex === -1
+    const memberID = (separatorIndex === -1
       ? decoded
-      : decoded.substring(0, separatorIndex)
+      : decoded.substring(0, separatorIndex)).trim()
     const patientNameFromUrl = separatorIndex === -1
       ? null
-      : decoded.substring(separatorIndex + 3)
+      : decoded.substring(separatorIndex + 3).trim()
 
-    if (!memberID) {
+    // Determine if we're looking up by name (no member ID) or by member ID
+    const lookupByName = !memberID && patientNameFromUrl
+
+    if (!memberID && !patientNameFromUrl) {
       return NextResponse.json(
-        { error: "Member ID is required" },
+        { error: "Member ID or patient name is required" },
         { status: 400 }
       )
     }
 
-    // Fetch payments for this patient by memberID only (name formats may differ)
-    const [insurancePayments, venmoPayments] = await Promise.all([
-      prisma.insurancePayment.findMany({
-        where: {
-          userId: user.id,
-          memberSubscriberID: { equals: memberID, mode: "insensitive" },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.venmoPayment.findMany({
-        where: {
-          userId: user.id,
-          memberSubscriberID: { equals: memberID, mode: "insensitive" },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-    ])
+    // Fetch payments — by memberID if available, otherwise by patient name
+    // When looking up by memberID, also include records with the same name but no memberID
+    let insurancePayments, venmoPayments
 
-    // Determine the display name (prefer insurance payment name, fall back to venmo, then URL)
+    if (lookupByName) {
+      [insurancePayments, venmoPayments] = await Promise.all([
+        prisma.insurancePayment.findMany({
+          where: { userId: user.id, payeeName: { equals: patientNameFromUrl, mode: "insensitive" } },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.venmoPayment.findMany({
+          where: { userId: user.id, patientName: { equals: patientNameFromUrl, mode: "insensitive" } },
+          orderBy: { createdAt: "desc" },
+        }),
+      ])
+    } else {
+      // First fetch by memberID to find the patient name
+      const byMemberId = await prisma.insurancePayment.findFirst({
+        where: { userId: user.id, memberSubscriberID: { equals: memberID, mode: "insensitive" } },
+        select: { payeeName: true },
+      })
+      const resolvedName = (byMemberId?.payeeName || patientNameFromUrl || '').trim();
+
+      console.log('[patient-detail] memberID:', memberID)
+      console.log('[patient-detail] patientNameFromUrl:', patientNameFromUrl)
+      console.log('[patient-detail] resolvedName:', resolvedName)
+
+      // Fetch by memberID OR by name with empty/null memberID
+      const nameCondition = resolvedName
+        ? [
+            { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
+            { payeeName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: { in: ["", null as unknown as string] } },
+          ]
+        : [{ memberSubscriberID: { equals: memberID, mode: "insensitive" as const } }]
+
+      const venmoNameCondition = resolvedName
+        ? [
+            { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
+            { patientName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: { in: ["", null as unknown as string] } },
+          ]
+        : [{ memberSubscriberID: { equals: memberID, mode: "insensitive" as const } }]
+
+      console.log('[patient-detail] nameCondition:', JSON.stringify(nameCondition))
+
+      ;[insurancePayments, venmoPayments] = await Promise.all([
+        prisma.insurancePayment.findMany({
+          where: { userId: user.id, OR: nameCondition },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.venmoPayment.findMany({
+          where: { userId: user.id, OR: venmoNameCondition },
+          orderBy: { createdAt: "desc" },
+        }),
+      ])
+
+      console.log('[patient-detail] insurance count:', insurancePayments.length)
+      // Log a sample of memberSubscriberID values to see what the no-memberID records actually have
+      const byMemberIdCount = insurancePayments.filter(p => p.memberSubscriberID && p.memberSubscriberID.toLowerCase() === memberID.toLowerCase()).length
+      const byNameCount = insurancePayments.filter(p => !p.memberSubscriberID || p.memberSubscriberID === '').length
+      const otherCount = insurancePayments.length - byMemberIdCount - byNameCount
+      console.log('[patient-detail] by memberID:', byMemberIdCount, 'by empty memberID:', byNameCount, 'other:', otherCount)
+      // Log unique memberSubscriberID values
+      const uniqueIds = [...new Set(insurancePayments.map(p => `"${p.memberSubscriberID}"`))]
+      console.log('[patient-detail] unique memberSubscriberIDs:', uniqueIds.join(', '))
+    }
+
+    // Determine the display name
     const patientName = insurancePayments[0]?.payeeName
       || venmoPayments[0]?.patientName
       || patientNameFromUrl
@@ -82,7 +132,7 @@ export async function GET(
     }))
 
     return NextResponse.json({
-      patientInfo: { memberID, name: patientName },
+      patientInfo: { memberID: memberID || '', name: patientName },
       insurancePayments: transformedInsurance,
       venmoPayments: transformedVenmo,
     })

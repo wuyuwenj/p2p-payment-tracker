@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insurance Payments</title>
+</head>
+<body>
+
+  <!-- Import Loading Overlay (shown during file import) -->
+  <div id="import-overlay" hidden>
+    <div>
+      <span>[spinner]</span>
+      <p>Importing payments...</p>
+      <p>25 / 100</p>
+      <progress value="25" max="100"></progress>
+      <p>25% complete</p>
+    </div>
+  </div>
+
+  <div>
+    <!-- Page Header -->
+    <header>
+      <div>
+        <h1>Insurance Payments</h1>
+        <p>Track and manage insurance payment records</p>
+      </div>
+      <div>
+        <button type="button">Help</button>
+        <label>
+          Import File
+          <input type="file" accept=".xlsx,.xls,.csv" hidden>
+        </label>
+        <button type="button">Clear All</button>
+      </div>
+    </header>
+
+    <!-- Search + Filter Row -->
+    <div>
+      <div>
+        <input type="text" placeholder="Search by patient name or member ID...">
+      </div>
+      <div>
+        <label>Filter by Status:</label>
+        <select>
+          <option value="all">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="RECORDED">Recorded</option>
+          <option value="NOTIFIED">Notified</option>
+          <option value="COLLECTED">Collected</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Import Help Panel (collapsible) -->
+    <section id="import-help" hidden>
+      <header>
+        <h3>Import Guide</h3>
+        <button type="button">X</button>
+      </header>
+      <p>Upload an Excel (.xlsx, .xls) or CSV (.csv) file with insurance payment data. The system will automatically match columns based on the following names:</p>
+      <dl>
+        <dt>Patient/Member Name:</dt>
+        <dd>Member Name, Patient Name, Patient</dd>
+
+        <dt>Amount (Priority):</dt>
+        <dd>Claim amount paid, Check/EFT amount, Amount</dd>
+
+        <dt>Member ID:</dt>
+        <dd>Member Subscriber ID, Member ID, Subscriber ID</dd>
+
+        <dt>Check Number:</dt>
+        <dd>Check/EFT number, Check Number, Check #, EFT Number</dd>
+
+        <dt>Payment Date:</dt>
+        <dd>Payment date, Payment Date</dd>
+
+        <dt>Claim Status:</dt>
+        <dd>Claim status, Claim Status</dd>
+
+        <dt>Amount:</dt>
+        <dd>Check/EFT amount, Amount, Payment Amount</dd>
+
+        <dt>Payee Name:</dt>
+        <dd>Payee name, Patient Name, Name</dd>
+
+        <dt>Claim Number:</dt>
+        <dd>Claim number, Claim Number, Claim #</dd>
+
+        <dt>Payee Address:</dt>
+        <dd>Payee address, Address</dd>
+      </dl>
+      <p>Tip: Column matching is case-insensitive.</p>
+    </section>
+
+    <!-- Manual Payment Form -->
+    <section>
+      <h3>Add Manual Payment</h3>
+      <form>
+        <!-- Repeat this block for each payment row -->
+        <fieldset>
+          <div>
+            <label>Payee Name *
+              <input type="text" placeholder="Start typing to search..." required>
+            </label>
+            <!-- Autocomplete dropdown -->
+            <ul id="patient-suggestions">
+              <li>
+                <strong>John Doe</strong>
+                <small>Member ID: ABC123</small>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <label>Member ID *
+              <input type="text" required>
+            </label>
+          </div>
+
+          <!-- These fields appear after payee name is entered -->
+          <div>
+            <label>Claim #
+              <input type="text" placeholder="Optional">
+            </label>
+
+            <label>Check #
+              <input type="text" placeholder="Optional">
+            </label>
+
+            <label>Amount *
+              <input type="number" step="0.01" placeholder="0.00" required>
+            </label>
+
+            <label>Service Date
+              <input type="date">
+            </label>
+
+            <label>Payment Date
+              <input type="date">
+            </label>
+
+            <label>Status
+              <select>
+                <option value="PENDING">Pending</option>
+                <option value="RECORDED">Recorded</option>
+                <option value="NOTIFIED">Notified</option>
+                <option value="COLLECTED">Collected</option>
+              </select>
+            </label>
+
+            <button type="button">Remove Row</button>
+          </div>
+        </fieldset>
+        <!-- /end payment row -->
+
+        <div>
+          <button type="button">+ Add Row</button>
+          <button type="submit">Save All</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Payments Table -->
+    <section>
+      <header>
+        <h3>All Payments</h3>
+        <p>Sorted by most recently added</p>
+      </header>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Payee Name</th>
+            <th>Member ID</th>
+            <th>Claim #</th>
+            <th>Amount</th>
+            <th>Service Date</th>
+            <th>Payment Date</th>
+            <th>Check #</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Sample row -->
+          <tr>
+            <td>
+              <select>
+                <option value="PENDING" selected>Pending</option>
+                <option value="RECORDED">Recorded</option>
+                <option value="NOTIFIED">Notified</option>
+                <option value="COLLECTED">Collected</option>
+              </select>
+            </td>
+            <td>John Doe</td>
+            <td>ABC123456</td>
+            <td>CLM-001</td>
+            <td>$250.00</td>
+            <td>2025-01-15</td>
+            <td>2025-02-01</td>
+            <td>CHK-789</td>
+            <td><button type="button">Delete</button></td>
+          </tr>
+          <!-- Empty state -->
+          <!--
+          <tr>
+            <td colspan="9">No payments recorded. Add your first payment above.</td>
+          </tr>
+          -->
+        </tbody>
+      </table>
+
+      <!-- Table Footer -->
+      <footer>
+        <div>
+          <span>Showing 1-10 of 25</span>
+          <span>Total: $5,250.00</span>
+        </div>
+
+        <!-- Pagination -->
+        <div>
+          <label>Rows per page:
+            <select>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+
+          <nav>
+            <button type="button">First</button>
+            <button type="button">Previous</button>
+            <span>Page 1 of 3</span>
+            <button type="button">Next</button>
+            <button type="button">Last</button>
+          </nav>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+</body>
+</html>
