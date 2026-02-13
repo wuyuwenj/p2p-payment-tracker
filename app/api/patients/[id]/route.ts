@@ -66,14 +66,14 @@ export async function GET(
       const nameCondition = resolvedName
         ? [
             { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
-            { payeeName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: { in: ["", null as unknown as string] } },
+            { payeeName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: "" },
           ]
         : [{ memberSubscriberID: { equals: memberID, mode: "insensitive" as const } }]
 
       const venmoNameCondition = resolvedName
         ? [
             { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
-            { patientName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: { in: ["", null as unknown as string] } },
+            { patientName: { equals: resolvedName, mode: "insensitive" as const }, memberSubscriberID: "" },
           ]
         : [{ memberSubscriberID: { equals: memberID, mode: "insensitive" as const } }]
 
