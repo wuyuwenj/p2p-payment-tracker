@@ -5,6 +5,39 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { Upload, FileText, X, CheckCircle, AlertCircle, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
+/** Split raw CSV text into logical records, handling quoted fields that contain newlines. */
+function splitCsvRecords(text: string): string[] {
+  const records: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') {
+      if (inQuotes && i + 1 < text.length && text[i + 1] === '"') {
+        // Escaped quote ""
+        current += '""';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+        current += char;
+      }
+    } else if ((char === '\n' || (char === '\r' && text[i + 1] === '\n')) && !inQuotes) {
+      if (char === '\r') i++; // skip the \n of \r\n
+      records.push(current);
+      current = '';
+    } else if (char === '\r' && !inQuotes) {
+      // bare \r as line ending
+      records.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current) records.push(current);
+  return records;
+}
+
 /** Parse a CSV line into fields, handling quoted values, empty fields, and embedded commas. */
 function parseCsvLine(line: string): string[] {
   const fields: string[] = [];
@@ -109,7 +142,7 @@ export function VenmoCsvUpload({ onImportComplete, existingPatients }: VenmoCsvU
 
     try {
       const text = await file.text();
-      const lines = text.split('\n');
+      const lines = splitCsvRecords(text);
 
       if (lines.length < 2) {
         throw new Error('CSV file appears to be empty');
