@@ -485,6 +485,14 @@ export default function InsurancePaymentsPage() {
         aVal = a.checkEFTAmount ?? 0;
         bVal = b.checkEFTAmount ?? 0;
         break;
+      case 'datesOfService':
+      case 'paymentDate': {
+        const aTime = new Date(a[sortField] ?? '').getTime();
+        const bTime = new Date(b[sortField] ?? '').getTime();
+        aVal = isNaN(aTime) ? 0 : aTime;
+        bVal = isNaN(bTime) ? 0 : bTime;
+        break;
+      }
       default:
         aVal = (a[sortField] ?? '').toString().toLowerCase();
         bVal = (b[sortField] ?? '').toString().toLowerCase();
