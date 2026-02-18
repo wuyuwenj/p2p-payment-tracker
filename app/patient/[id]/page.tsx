@@ -392,6 +392,14 @@ export default function PatientDetailsPage() {
         aVal = a.checkEFTAmount ?? 0;
         bVal = b.checkEFTAmount ?? 0;
         break;
+      case 'datesOfService':
+      case 'paymentDate': {
+        const aTime = new Date(a[insuranceSortField] ?? '').getTime();
+        const bTime = new Date(b[insuranceSortField] ?? '').getTime();
+        aVal = isNaN(aTime) ? 0 : aTime;
+        bVal = isNaN(bTime) ? 0 : bTime;
+        break;
+      }
       default:
         aVal = (a[insuranceSortField] ?? '').toString().toLowerCase();
         bVal = (b[insuranceSortField] ?? '').toString().toLowerCase();
@@ -426,6 +434,13 @@ export default function PatientDetailsPage() {
         aVal = a.amount ?? 0;
         bVal = b.amount ?? 0;
         break;
+      case 'date': {
+        const aTime = new Date(a.date ?? '').getTime();
+        const bTime = new Date(b.date ?? '').getTime();
+        aVal = isNaN(aTime) ? 0 : aTime;
+        bVal = isNaN(bTime) ? 0 : bTime;
+        break;
+      }
       default:
         aVal = (a[venmoSortField] ?? '').toString().toLowerCase();
         bVal = (b[venmoSortField] ?? '').toString().toLowerCase();

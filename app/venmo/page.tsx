@@ -317,6 +317,13 @@ export default function VenmoPaymentsPage() {
         aVal = a.amount ?? 0;
         bVal = b.amount ?? 0;
         break;
+      case 'date': {
+        const aTime = new Date(a.date ?? '').getTime();
+        const bTime = new Date(b.date ?? '').getTime();
+        aVal = isNaN(aTime) ? 0 : aTime;
+        bVal = isNaN(bTime) ? 0 : bTime;
+        break;
+      }
       default:
         aVal = (a[sortField] ?? '').toString().toLowerCase();
         bVal = (b[sortField] ?? '').toString().toLowerCase();
