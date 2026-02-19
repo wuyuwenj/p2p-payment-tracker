@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, Settings } from 'lucide-react';
 import UserButton from './UserButton';
 
 export default function Navigation() {
@@ -43,7 +43,20 @@ export default function Navigation() {
             </div>
           </div>
 
-          <UserButton />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/settings"
+              className={`p-2 rounded-lg transition-colors ${
+                pathname === '/settings'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/50'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </Link>
+            <UserButton />
+          </div>
         </div>
       </div>
     </nav>

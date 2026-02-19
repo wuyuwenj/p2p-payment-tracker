@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { ChevronDown, ChevronUp, Trash2, Copy, Check, Settings2, Download, HelpCircle, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -81,6 +82,7 @@ function TruncatableCell({ value, maxWidth = 'max-w-[150px]' }: { value: string 
 
 export default function PatientDetailsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { ignoredAddresses } = useSettings();
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
@@ -370,10 +372,19 @@ export default function PatientDetailsPage() {
     }
   };
 
+  // Filter out ignored addresses first
+  const visibleInsurancePayments = ignoredAddresses.length > 0
+    ? insurancePayments.filter(p => {
+        if (!p.payeeAddress) return true;
+        const addr = p.payeeAddress.trim().toLowerCase();
+        return !ignoredAddresses.some(ig => ig.trim().toLowerCase() === addr);
+      })
+    : insurancePayments;
+
   // Filter insurance payments by tracking status
   const filteredInsurancePayments = statusFilter === 'all'
-    ? insurancePayments
-    : insurancePayments.filter(p => p.trackingStatus === statusFilter);
+    ? visibleInsurancePayments
+    : visibleInsurancePayments.filter(p => p.trackingStatus === statusFilter);
 
   // Apply sorting to insurance payments
   const sortedInsurancePayments = [...filteredInsurancePayments].sort((a, b) => {
@@ -475,7 +486,7 @@ export default function PatientDetailsPage() {
     setVenmoCurrentPage(1);
   };
 
-  const totalInsurance = insurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
+  const totalInsurance = visibleInsurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
   const filteredTotalInsurance = filteredInsurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
   const totalVenmo = venmoPayments.reduce((sum, p) => sum + p.amount, 0);
   const balance = totalInsurance - totalVenmo;

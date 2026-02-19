@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import Navigation from "@/components/Navigation";
 import AuthProvider from "@/components/AuthProvider";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 export default function RootLayout({
   children,
@@ -31,10 +32,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Navigation />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
+          <SettingsProvider>
+            <Navigation />
+            <main className="container mx-auto px-4 py-8">
+              {children}
+            </main>
+          </SettingsProvider>
         </AuthProvider>
       </body>
     </html>

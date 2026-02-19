@@ -1,17 +1,22 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
 // GET - Fetch aggregated patient data for the authenticated user
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const ignoredAddresses = request.nextUrl.searchParams
+      .getAll('ignoredAddress')
+      .map(a => a.trim().toLowerCase())
+      .filter(Boolean)
+
     // Fetch both payment types
-    const [insurancePayments, venmoPayments] = await Promise.all([
+    const [allInsurancePayments, venmoPayments] = await Promise.all([
       prisma.insurancePayment.findMany({
         where: { userId: user.id },
       }),
@@ -19,6 +24,13 @@ export async function GET() {
         where: { userId: user.id },
       }),
     ])
+
+    // Filter out ignored addresses
+    const insurancePayments = ignoredAddresses.length > 0
+      ? allInsurancePayments.filter(p =>
+          !p.payeeAddress || !ignoredAddresses.includes(p.payeeAddress.trim().toLowerCase())
+        )
+      : allInsurancePayments
 
     // Group by patient using memberSubscriberID only (name formats may differ between sources)
     const patientMap = new Map<

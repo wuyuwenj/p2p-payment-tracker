@@ -11,6 +11,7 @@ import { Badge } from '@/components/tracker/Badge';
 import { Card } from '@/components/tracker/Card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { InsurancePayment, TrackingStatus } from '@/lib/types';
+import { useSettings } from '@/contexts/SettingsContext';
 import { toast } from '@/hooks/use-toast';
 
 type StatusVariant = 'secondary' | 'info' | 'warning' | 'success';
@@ -58,6 +59,7 @@ interface PatientSuggestion {
 export default function InsurancePaymentsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { ignoredAddresses } = useSettings();
   const [payments, setPayments] = useState<InsurancePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportHelp, setShowImportHelp] = useState(false);
@@ -453,6 +455,11 @@ export default function InsurancePaymentsPage() {
   }
 
   const filteredPayments = payments.filter(p => {
+    // Filter out ignored addresses
+    if (ignoredAddresses.length > 0 && p.payeeAddress) {
+      const addr = p.payeeAddress.trim().toLowerCase();
+      if (ignoredAddresses.some(ig => ig.trim().toLowerCase() === addr)) return false;
+    }
     // Filter by status
     if (statusFilter !== 'all' && p.trackingStatus !== statusFilter) {
       return false;

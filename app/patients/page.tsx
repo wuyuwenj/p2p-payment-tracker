@@ -7,6 +7,7 @@ import { Card } from '@/components/tracker/Card';
 import { Badge } from '@/components/tracker/Badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { InsurancePayment, VenmoPayment, TrackingStatus } from '@/lib/types';
+import { useSettings } from '@/contexts/SettingsContext';
 
 type StatusVariant = 'secondary' | 'info' | 'warning' | 'success';
 
@@ -34,6 +35,7 @@ interface PatientDetails {
 
 export default function PatientsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { ignoredAddresses, loading: settingsLoading } = useSettings();
   const [patients, setPatients] = useState<PatientSummary[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<PatientSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,12 +87,12 @@ export default function PatientsPage() {
   );
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && !settingsLoading && user) {
       loadPatients();
-    } else if (!authLoading && !user) {
+    } else if (!authLoading && !settingsLoading && !user) {
       setLoading(false);
     }
-  }, [authLoading, user]);
+  }, [authLoading, settingsLoading, user, ignoredAddresses]);
 
   useEffect(() => {
     applyFilters();
@@ -103,7 +105,9 @@ export default function PatientsPage() {
 
   const loadPatients = async () => {
     try {
-      const response = await fetch('/api/patients');
+      const params = new URLSearchParams();
+      ignoredAddresses.forEach(a => params.append('ignoredAddress', a));
+      const response = await fetch(`/api/patients?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setPatients(data);

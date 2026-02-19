@@ -23,6 +23,7 @@ model User {
   sessions           Session[]
   insurancePayments  InsurancePayment[]
   venmoPayments      VenmoPayment[]
+  settings           UserSetting?
 
   @@map("users")
 }
@@ -107,6 +108,19 @@ model InsurancePayment {
   @@index([claimNumber])
   @@index([memberSubscriberID, payeeName])
   @@map("insurance_payments")
+}
+
+// User Settings Table
+model UserSetting {
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  ignoredAddresses String[] @map("ignored_addresses")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
 }
 
 // Venmo Payments Table (with userId)
