@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { Card } from '@/components/tracker/Card';
 import { Badge } from '@/components/tracker/Badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -42,6 +42,7 @@ export default function PatientsPage() {
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
   const [patientDetails, setPatientDetails] = useState<Record<string, PatientDetails>>({});
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+  const [deletingPatient, setDeletingPatient] = useState<string | null>(null);
 
   // Pagination state
   const [pageSize, setPageSize] = useState<number>(10);
@@ -249,6 +250,25 @@ export default function PatientsPage() {
     }
   };
 
+  const deletePatient = async (patient: PatientSummary) => {
+    const key = getPatientKey(patient);
+    if (!confirm(`Delete all records for "${patient.name}"? This cannot be undone.`)) return;
+    setDeletingPatient(key);
+    try {
+      const response = await fetch(`/api/patients/${encodeURIComponent(key)}`, { method: 'DELETE' });
+      if (response.ok) {
+        setPatients(prev => prev.filter(p => getPatientKey(p) !== key));
+        if (expandedPatient === key) setExpandedPatient(null);
+      } else {
+        alert('Failed to delete patient.');
+      }
+    } catch {
+      alert('Failed to delete patient.');
+    } finally {
+      setDeletingPatient(null);
+    }
+  };
+
   const getStatusConfig = (status: TrackingStatus) => {
     return TRACKING_STATUSES.find(s => s.value === status) || TRACKING_STATUSES[0];
   };
@@ -422,13 +442,27 @@ export default function PatientsPage() {
                         {getStatusBadge(patient.balance)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        <a
-                          href={`/patient/${encodeURIComponent(key)}`}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 font-medium"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Details
-                        </a>
+                        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            href={`/patient/${encodeURIComponent(key)}`}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 font-medium"
+                          >
+                            Details
+                          </a>
+                          {process.env.NODE_ENV === 'development' && (
+                            <button
+                              onClick={() => deletePatient(patient)}
+                              disabled={deletingPatient === key}
+                              className="text-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+                              title="Delete patient (dev only)"
+                            >
+                              {deletingPatient === key
+                                ? <span className="text-xs">...</span>
+                                : <Trash2 className="w-4 h-4" />
+                              }
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {isExpanded && (

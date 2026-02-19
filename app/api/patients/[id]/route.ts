@@ -2,6 +2,60 @@ import { NextRequest, NextResponse } from "next/server"
 import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 
+// DELETE - Remove all payments for a patient (dev only)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Only available in development" }, { status: 403 })
+  }
+
+  try {
+    const user = await getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+    const decoded = decodeURIComponent(id)
+    const separatorIndex = decoded.indexOf("|||")
+    const memberID = (separatorIndex === -1 ? decoded : decoded.substring(0, separatorIndex)).trim()
+    const patientName = separatorIndex === -1 ? null : decoded.substring(separatorIndex + 3).trim()
+
+    // Build conditions matching the same logic as GET
+    const insuranceWhere = memberID
+      ? {
+          userId: user.id,
+          OR: [
+            { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
+            ...(patientName ? [{ payeeName: { equals: patientName, mode: "insensitive" as const }, memberSubscriberID: "" }] : []),
+          ],
+        }
+      : { userId: user.id, payeeName: { equals: patientName!, mode: "insensitive" as const } }
+
+    const venmoWhere = memberID
+      ? {
+          userId: user.id,
+          OR: [
+            { memberSubscriberID: { equals: memberID, mode: "insensitive" as const } },
+            ...(patientName ? [{ patientName: { equals: patientName, mode: "insensitive" as const }, memberSubscriberID: "" }] : []),
+          ],
+        }
+      : { userId: user.id, patientName: { equals: patientName!, mode: "insensitive" as const } }
+
+    const [insurance, venmo] = await Promise.all([
+      prisma.insurancePayment.deleteMany({ where: insuranceWhere }),
+      prisma.venmoPayment.deleteMany({ where: venmoWhere }),
+    ])
+
+    return NextResponse.json({ deletedInsurance: insurance.count, deletedVenmo: venmo.count })
+  } catch (error) {
+    console.error("Error deleting patient:", error)
+    return NextResponse.json({ error: "Failed to delete patient" }, { status: 500 })
+  }
+}
+
 // GET - Fetch specific patient data (insurance + venmo payments)
 export async function GET(
   request: NextRequest,
