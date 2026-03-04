@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
+import { normalizeDate } from "@/lib/utils"
 
 // GET - Fetch all insurance payments for the authenticated user
 export async function GET() {
@@ -67,10 +68,12 @@ export async function POST(request: NextRequest) {
       select: { id: true, payeeName: true, memberSubscriberID: true, datesOfService: true, checkNumber: true, paymentDate: true },
     })
 
-    // Create a map for fast lookup: key = payeeName|memberSubscriberID|datesOfService|checkNumber|paymentDate
+    // Create a map for fast lookup: key = payeeName|memberSubscriberID|datesOfService|checkNumber
+    // Payment date excluded so same service date is treated as duplicate regardless of payment date
+    // Normalize dates so MM/DD/YY and MM/DD/YYYY are treated as the same
     const existingMap = new Map<string, string>()
     existingPayments.forEach(p => {
-      const key = `${p.payeeName}|${p.memberSubscriberID}|${p.datesOfService || ''}|${p.checkNumber || ''}|${p.paymentDate || ''}`
+      const key = `${p.payeeName}|${p.memberSubscriberID}|${normalizeDate(p.datesOfService || '')}|${p.checkNumber || ''}`
       existingMap.set(key, p.id)
     })
 
@@ -82,10 +85,10 @@ export async function POST(request: NextRequest) {
       const paymentData = {
         userId,
         claimStatus: p.claimStatus || null,
-        datesOfService: p.datesOfService || null,
+        datesOfService: normalizeDate(p.datesOfService || '') || null,
         memberSubscriberID: p.memberSubscriberID || "",
         providerName: p.providerName || null,
-        paymentDate: p.paymentDate || null,
+        paymentDate: normalizeDate(p.paymentDate || '') || null,
         claimNumber: p.claimNumber || null,
         checkNumber: p.checkNumber || null,
         checkEFTAmount: p.checkEFTAmount || 0,
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
         payeeAddress: p.payeeAddress || null,
       }
 
-      const key = `${paymentData.payeeName}|${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}|${paymentData.checkNumber || ''}|${paymentData.paymentDate || ''}`
+      const key = `${paymentData.payeeName}|${paymentData.memberSubscriberID}|${paymentData.datesOfService || ''}|${paymentData.checkNumber || ''}`
       const existingId = existingMap.get(key)
 
       if (existingId && existingId !== 'pending') {
@@ -142,6 +145,97 @@ export async function POST(request: NextRequest) {
     console.error("Error creating insurance payments:", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create payments" },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH - Merge duplicate insurance payments (same service date + amount + patient)
+export async function PATCH() {
+  try {
+    const user = await getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const allPayments = await prisma.insurancePayment.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    })
+
+    // Group by normalized service date + amount + patient key
+    const groups = new Map<string, typeof allPayments>()
+    for (const p of allPayments) {
+      const normService = normalizeDate(p.datesOfService || '')
+      const key = `${p.payeeName}|${p.memberSubscriberID}|${normService}|${Number(p.checkEFTAmount)}`
+      const group = groups.get(key) || []
+      group.push(p)
+      groups.set(key, group)
+    }
+
+    const idsToDelete: string[] = []
+    const toNormalize: { id: string; datesOfService: string; paymentDate: string }[] = []
+
+    for (const [, group] of groups) {
+      if (group.length <= 1) {
+        // Single record - just normalize its dates
+        const p = group[0]
+        const normService = normalizeDate(p.datesOfService || '')
+        const normPayment = normalizeDate(p.paymentDate || '')
+        if (normService !== (p.datesOfService || '') || normPayment !== (p.paymentDate || '')) {
+          toNormalize.push({ id: p.id, datesOfService: normService, paymentDate: normPayment })
+        }
+        continue
+      }
+
+      // Pick the best record: prefer 4-digit year payment date, non-PENDING status, most fields filled
+      group.sort((a, b) => {
+        const aHas4Digit = /\/\d{4}$/.test(a.paymentDate || '') ? 1 : 0
+        const bHas4Digit = /\/\d{4}$/.test(b.paymentDate || '') ? 1 : 0
+        if (bHas4Digit !== aHas4Digit) return bHas4Digit - aHas4Digit
+        const aNonPending = a.trackingStatus !== 'PENDING' ? 1 : 0
+        const bNonPending = b.trackingStatus !== 'PENDING' ? 1 : 0
+        if (bNonPending !== aNonPending) return bNonPending - aNonPending
+        return 0
+      })
+
+      const keeper = group[0]
+      // Normalize the keeper's dates
+      const normService = normalizeDate(keeper.datesOfService || '')
+      const normPayment = normalizeDate(keeper.paymentDate || '')
+      if (normService !== (keeper.datesOfService || '') || normPayment !== (keeper.paymentDate || '')) {
+        toNormalize.push({ id: keeper.id, datesOfService: normService, paymentDate: normPayment })
+      }
+
+      // Mark the rest for deletion
+      for (let i = 1; i < group.length; i++) {
+        idsToDelete.push(group[i].id)
+      }
+    }
+
+    // Normalize dates on kept records
+    for (const { id, datesOfService, paymentDate } of toNormalize) {
+      await prisma.insurancePayment.update({
+        where: { id },
+        data: { datesOfService, paymentDate },
+      })
+    }
+
+    // Delete duplicates
+    if (idsToDelete.length > 0) {
+      await prisma.insurancePayment.deleteMany({
+        where: { id: { in: idsToDelete } },
+      })
+    }
+
+    return NextResponse.json({
+      merged: idsToDelete.length,
+      normalized: toNormalize.length,
+    })
+  } catch (error) {
+    console.error("Error merging duplicates:", error)
+    return NextResponse.json(
+      { error: "Failed to merge duplicates" },
       { status: 500 }
     )
   }

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronDown, ChevronUp, Trash2, Copy, Check, Settings2, Download, HelpCircle, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Copy, Check, Settings2, Download, HelpCircle, X, Merge } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/tracker/Badge';
@@ -19,6 +19,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import { InsurancePayment, VenmoPayment, TrackingStatus } from '@/lib/types';
+import { normalizeDate } from '@/lib/utils';
 
 // Column configuration
 type ColumnKey = 'tracking' | 'patientName' | 'claimStatus' | 'serviceDates' | 'provider' | 'paymentDate' | 'checkNumber' | 'amount' | 'address';
@@ -105,6 +106,27 @@ export default function PatientDetailsPage() {
   const [venmoCurrentPage, setVenmoCurrentPage] = useState<number>(1);
 
   const PAGE_SIZE_OPTIONS = [10, 25, 100];
+
+  // Deduplicate insurance payments by normalized service date + amount
+  // Keeps the record with 4-digit year payment date or non-PENDING status
+  const deduplicatedInsurancePayments = useMemo(() => {
+    const seen = new Map<string, InsurancePayment>();
+    for (const p of insurancePayments) {
+      const normService = normalizeDate(p.datesOfService || '');
+      const key = `${normService}|${p.checkEFTAmount}`;
+      const existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, p);
+      } else {
+        const existingHas4Digit = /\/\d{4}$/.test(existing.paymentDate || '');
+        const currentHas4Digit = /\/\d{4}$/.test(p.paymentDate || '');
+        if ((!existingHas4Digit && currentHas4Digit) || (existing.trackingStatus === 'PENDING' && p.trackingStatus !== 'PENDING')) {
+          seen.set(key, p);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  }, [insurancePayments]);
 
   const togglePaymentSelection = (paymentId: string) => {
     setSelectedPayments(prev => {
@@ -235,14 +257,16 @@ export default function PatientDetailsPage() {
 
   const formatServiceDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
+    // Normalize to consistent MM/DD/YYYY format (handles 2-digit and 4-digit years)
+    const normalized = normalizeDate(dateStr);
     // Handle "05/18/2025-05/18/2025" format - show only once if same date
-    if (dateStr.includes('-')) {
-      const [start, end] = dateStr.split('-');
+    if (normalized.includes('-')) {
+      const [start, end] = normalized.split('-');
       if (start.trim() === end.trim()) {
         return start.trim();
       }
     }
-    return dateStr;
+    return normalized;
   };
 
   const exportToPDF = () => {
@@ -370,10 +394,10 @@ export default function PatientDetailsPage() {
     }
   };
 
-  // Filter insurance payments by tracking status
+  // Filter insurance payments by tracking status (using deduplicated list)
   const filteredInsurancePayments = statusFilter === 'all'
-    ? insurancePayments
-    : insurancePayments.filter(p => p.trackingStatus === statusFilter);
+    ? deduplicatedInsurancePayments
+    : deduplicatedInsurancePayments.filter(p => p.trackingStatus === statusFilter);
 
   // Apply sorting to insurance payments
   const sortedInsurancePayments = [...filteredInsurancePayments].sort((a, b) => {
@@ -394,8 +418,11 @@ export default function PatientDetailsPage() {
         break;
       case 'datesOfService':
       case 'paymentDate': {
-        const aTime = new Date(a[insuranceSortField] ?? '').getTime();
-        const bTime = new Date(b[insuranceSortField] ?? '').getTime();
+        // Normalize dates (handles MM/DD/YY → MM/DD/YYYY) and extract start date from ranges
+        const aDateStr = normalizeDate(a[insuranceSortField] ?? '').split('-')[0];
+        const bDateStr = normalizeDate(b[insuranceSortField] ?? '').split('-')[0];
+        const aTime = new Date(aDateStr).getTime();
+        const bTime = new Date(bDateStr).getTime();
         aVal = isNaN(aTime) ? 0 : aTime;
         bVal = isNaN(bTime) ? 0 : bTime;
         break;
@@ -475,7 +502,7 @@ export default function PatientDetailsPage() {
     setVenmoCurrentPage(1);
   };
 
-  const totalInsurance = insurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
+  const totalInsurance = deduplicatedInsurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
   const filteredTotalInsurance = filteredInsurancePayments.reduce((sum, p) => sum + p.checkEFTAmount, 0);
   const totalVenmo = venmoPayments.reduce((sum, p) => sum + p.amount, 0);
   const balance = totalInsurance - totalVenmo;
@@ -518,6 +545,29 @@ export default function PatientDetailsPage() {
         console.error('Error deleting payment:', error);
         alert('Error deleting payment');
       }
+    }
+  };
+
+  const [merging, setMerging] = useState(false);
+  const duplicateCount = insurancePayments.length - deduplicatedInsurancePayments.length;
+
+  const handleMergeDuplicates = async () => {
+    if (!confirm(`This will permanently merge ${duplicateCount} duplicate record${duplicateCount !== 1 ? 's' : ''}. Continue?`)) return;
+    setMerging(true);
+    try {
+      const response = await fetch('/api/insurance-payments', { method: 'PATCH' });
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Merged ${result.merged} duplicate${result.merged !== 1 ? 's' : ''}, normalized ${result.normalized} date${result.normalized !== 1 ? 's' : ''}.`);
+        loadPatientData();
+      } else {
+        alert('Error merging duplicates');
+      }
+    } catch (error) {
+      console.error('Error merging duplicates:', error);
+      alert('Error merging duplicates');
+    } finally {
+      setMerging(false);
     }
   };
 
@@ -638,6 +688,16 @@ export default function PatientDetailsPage() {
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help
               </Button>
+              {duplicateCount > 0 && (
+                <button
+                  onClick={handleMergeDuplicates}
+                  disabled={merging}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-orange-500 text-white border border-orange-500 rounded-md hover:bg-orange-600 disabled:opacity-50"
+                >
+                  <Merge className="w-4 h-4" />
+                  {merging ? 'Merging...' : `Merge ${duplicateCount} Duplicate${duplicateCount !== 1 ? 's' : ''}`}
+                </button>
+              )}
               <button
                 onClick={exportToPDF}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white border border-blue-600 rounded-md hover:bg-blue-700"
@@ -683,8 +743,8 @@ export default function PatientDetailsPage() {
               </Select>
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {statusFilter === 'all'
-                  ? `${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
-                  : `${filteredInsurancePayments.length} of ${insurancePayments.length} payment${insurancePayments.length !== 1 ? 's' : ''}`
+                  ? `${deduplicatedInsurancePayments.length} payment${deduplicatedInsurancePayments.length !== 1 ? 's' : ''}`
+                  : `${filteredInsurancePayments.length} of ${deduplicatedInsurancePayments.length} payment${deduplicatedInsurancePayments.length !== 1 ? 's' : ''}`
                 }
               </span>
             </div>
@@ -849,7 +909,7 @@ export default function PatientDetailsPage() {
                     ) : (
                       <>
                         Showing {((insuranceCurrentPage - 1) * insurancePageSize) + 1}-{Math.min(insuranceCurrentPage * insurancePageSize, sortedInsurancePayments.length)} of {sortedInsurancePayments.length}
-                        {statusFilter !== 'all' && ` (filtered from ${insurancePayments.length})`}
+                        {statusFilter !== 'all' && ` (filtered from ${deduplicatedInsurancePayments.length})`}
                       </>
                     )}
                   </span>
@@ -1036,7 +1096,7 @@ export default function PatientDetailsPage() {
               <div className="mb-3">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Insurance Received</p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalInsurance.toFixed(2)}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{insurancePayments.length} payment(s)</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{deduplicatedInsurancePayments.length} payment(s)</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Patient Paid</p>

@@ -11,6 +11,7 @@ import { Badge } from '@/components/tracker/Badge';
 import { Card } from '@/components/tracker/Card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { InsurancePayment, TrackingStatus } from '@/lib/types';
+import { normalizeDate } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 type StatusVariant = 'secondary' | 'info' | 'warning' | 'success';
@@ -202,26 +203,27 @@ export default function InsurancePaymentsPage() {
           console.log('Columns found:', Object.keys(jsonData[0] as object));
         }
 
-        const formatValue = (val: unknown): string => {
+        const formatValue = (val: unknown, isDate = false): string => {
           if (val instanceof Date) {
             const m = String(val.getMonth() + 1).padStart(2, '0');
             const d = String(val.getDate()).padStart(2, '0');
             return `${m}/${d}/${val.getFullYear()}`;
           }
-          return String(val);
+          const str = String(val);
+          return isDate ? normalizeDate(str) : str;
         };
 
-        const getColumnValue = (row: any, possibleNames: string[]): string => {
+        const getColumnValue = (row: any, possibleNames: string[], isDate = false): string => {
           for (const name of possibleNames) {
             if (row[name] !== undefined && row[name] !== null) {
-              return formatValue(row[name]);
+              return formatValue(row[name], isDate);
             }
           }
           const rowKeys = Object.keys(row);
           for (const name of possibleNames) {
             const found = rowKeys.find(k => k.toLowerCase() === name.toLowerCase());
             if (found && row[found] !== undefined && row[found] !== null) {
-              return formatValue(row[found]);
+              return formatValue(row[found], isDate);
             }
           }
           return '';
@@ -229,10 +231,10 @@ export default function InsurancePaymentsPage() {
 
         const newPayments = jsonData.map((row: any) => ({
           claimStatus: getColumnValue(row, ['Claim status', 'Claim Status', 'ClaimStatus', 'Reasons']),
-          datesOfService: getColumnValue(row, ['Dates of service', 'Dates of Service', 'DatesOfService', 'Service Date', 'Service Dates']),
+          datesOfService: getColumnValue(row, ['Dates of service', 'Dates of Service', 'DatesOfService', 'Service Date', 'Service Dates'], true),
           memberSubscriberID: getColumnValue(row, ['Member nbscriber ID', 'Member Subscriber ID', 'Member subscriber ID', 'MemberSubscriberID', 'Member ID', 'MemberID', 'Subscriber ID']),
           providerName: getColumnValue(row, ['Provider name', 'Provider Name', 'ProviderName', 'Provider', 'Doctor Name']),
-          paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate', 'Record Date']),
+          paymentDate: getColumnValue(row, ['Payment date', 'Payment Date', 'PaymentDate', 'Record Date'], true),
           claimNumber: getColumnValue(row, ['Claim number', 'Claim Number', 'ClaimNumber', 'Claim #', 'Claim#']),
           checkNumber: getColumnValue(row, ['Check/EFT number', 'Check/EFT Number', 'Chumber', 'Check Number', 'Check number', 'CheckNumber', 'Check #', 'Check#', 'EFT Number']),
           checkEFTAmount: parseFloat(getColumnValue(row, ['Claim amount paid', 'Claim Amount Paid', 'ClaimAmountPaid', 'Check/EFT amount', 'Check/EFT Amount', 'CheckEFTAmount', 'Amount', 'Payment Amount']).replace(/[$,]/g, '')) || 0,
@@ -487,8 +489,10 @@ export default function InsurancePaymentsPage() {
         break;
       case 'datesOfService':
       case 'paymentDate': {
-        const aTime = new Date(a[sortField] ?? '').getTime();
-        const bTime = new Date(b[sortField] ?? '').getTime();
+        const aDateStr = normalizeDate(a[sortField] ?? '').split('-')[0];
+        const bDateStr = normalizeDate(b[sortField] ?? '').split('-')[0];
+        const aTime = new Date(aDateStr).getTime();
+        const bTime = new Date(bDateStr).getTime();
         aVal = isNaN(aTime) ? 0 : aTime;
         bVal = isNaN(bTime) ? 0 : bTime;
         break;
@@ -902,8 +906,8 @@ export default function InsurancePaymentsPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       ${payment.checkEFTAmount.toFixed(2)}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.datesOfService || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.paymentDate || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{normalizeDate(payment.datesOfService) || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{normalizeDate(payment.paymentDate) || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.checkNumber || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>

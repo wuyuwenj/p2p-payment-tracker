@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getUser } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
+import { normalizeDate } from "@/lib/utils"
 
 // GET - Fetch aggregated patient data for the authenticated user
 export async function GET() {
@@ -33,8 +34,21 @@ export async function GET() {
       }
     >()
 
+    // Deduplicate insurance payments by normalized service date + amount per patient
+    const dedupSeen = new Set<string>()
+    const deduplicatedInsurance = insurancePayments.filter((payment) => {
+      const patientKey = payment.memberSubscriberID
+        ? payment.memberSubscriberID.toLowerCase()
+        : `name:${payment.payeeName.toLowerCase()}`
+      const normService = normalizeDate(payment.datesOfService || '')
+      const dedupKey = `${patientKey}|${normService}|${Number(payment.checkEFTAmount)}`
+      if (dedupSeen.has(dedupKey)) return false
+      dedupSeen.add(dedupKey)
+      return true
+    })
+
     // Process insurance payments first (these typically have the canonical name format)
-    insurancePayments.forEach((payment) => {
+    deduplicatedInsurance.forEach((payment) => {
       const key = payment.memberSubscriberID
         ? payment.memberSubscriberID.toLowerCase()
         : `name:${payment.payeeName.toLowerCase()}`
