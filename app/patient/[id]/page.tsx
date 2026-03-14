@@ -97,6 +97,7 @@ export default function PatientDetailsPage() {
 
   // Selection state for PDF export
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [selectedVenmoPayments, setSelectedVenmoPayments] = useState<Set<string>>(new Set());
   const [showExportHelp, setShowExportHelp] = useState(false);
 
   // Pagination state
@@ -338,7 +339,7 @@ export default function PatientDetailsPage() {
             row.push(payment.providerName || '-');
             break;
           case 'paymentDate':
-            row.push(payment.paymentDate || '-');
+            row.push(normalizeDate(payment.paymentDate || '') || '-');
             break;
           case 'checkNumber':
             row.push(payment.checkNumber || '-');
@@ -373,6 +374,162 @@ export default function PatientDetailsPage() {
 
     // Download
     const fileName = `${patientInfo.name.replace(/\s+/g, '_')}_insurance_payments_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
+  const exportAllToPDF = () => {
+    if (!patientInfo) return;
+
+    // Insurance: respect filter and selection
+    const insuranceToExport = selectedPayments.size > 0
+      ? sortedInsurancePayments.filter(p => selectedPayments.has(p.id))
+      : sortedInsurancePayments;
+
+    if (insuranceToExport.length === 0 && sortedVenmoPayments.length === 0) {
+      alert('No payments to export.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Patient Payment Report', pageWidth / 2, 20, { align: 'center' });
+
+    // Patient Info
+    doc.setFontSize(12);
+    doc.text(`Patient: ${patientInfo.name}`, 14, 35);
+    doc.text(`Member ID: ${patientInfo.memberID}`, 14, 42);
+
+    // Address
+    let nextY = 50;
+    const address = insurancePayments[0]?.payeeAddress;
+    if (address) {
+      const addressParts = address.split(',').map(part => part.trim());
+      doc.text(`Address: ${addressParts[0]}`, 14, 49);
+      addressParts.slice(1).forEach((part, index) => {
+        doc.text(part, 14, 54 + (index * 5));
+      });
+      nextY = 54 + ((addressParts.length - 1) * 5) + 5;
+    }
+
+    // Summary
+    const exportInsuranceTotal = insuranceToExport.reduce((sum, p) => sum + p.checkEFTAmount, 0);
+    const venmoForSummary = selectedVenmoPayments.size > 0
+      ? sortedVenmoPayments.filter(p => selectedVenmoPayments.has(p.id))
+      : sortedVenmoPayments;
+    const venmoTotalForExport = venmoForSummary.reduce((sum, p) => sum + p.amount, 0);
+    const balanceAmount = exportInsuranceTotal - venmoTotalForExport;
+
+    doc.setFontSize(10);
+    doc.text(`Total Insurance: $${exportInsuranceTotal.toFixed(2)}   |   Total Patient Paid: $${venmoTotalForExport.toFixed(2)}   |   Balance: $${Math.abs(balanceAmount).toFixed(2)}${balanceAmount < 0 ? ' (overpaid)' : ''}`, 14, nextY);
+    nextY += 10;
+
+    // --- Insurance Payments Table ---
+    if (insuranceToExport.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Insurance Payments', 14, nextY);
+      nextY += 5;
+
+      const headers: string[] = [];
+      const columnKeys: ColumnKey[] = [];
+      INSURANCE_COLUMNS.forEach(col => {
+        if (isColumnVisible(col.key)) {
+          headers.push(col.label);
+          columnKeys.push(col.key);
+        }
+      });
+
+      const tableData = insuranceToExport.map(payment => {
+        const row: string[] = [];
+        columnKeys.forEach(key => {
+          switch (key) {
+            case 'tracking':
+              row.push(getStatusConfig(payment.trackingStatus).label);
+              break;
+            case 'patientName':
+              row.push(payment.payeeName || '-');
+              break;
+            case 'claimStatus':
+              row.push(payment.claimStatus || '-');
+              break;
+            case 'serviceDates':
+              row.push(formatServiceDate(payment.datesOfService) || '-');
+              break;
+            case 'provider':
+              row.push(payment.providerName || '-');
+              break;
+            case 'paymentDate':
+              row.push(normalizeDate(payment.paymentDate || '') || '-');
+              break;
+            case 'checkNumber':
+              row.push(payment.checkNumber || '-');
+              break;
+            case 'amount':
+              row.push(`$${payment.checkEFTAmount.toFixed(2)}`);
+              break;
+            case 'address':
+              row.push(payment.payeeAddress || '-');
+              break;
+          }
+        });
+        return row;
+      });
+
+      autoTable(doc, {
+        head: [headers],
+        body: tableData,
+        startY: nextY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+      });
+
+      const afterInsurance = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY || nextY + 20;
+      doc.setFontSize(10);
+      doc.text(`Insurance Payments: ${insuranceToExport.length}   |   Subtotal: $${exportInsuranceTotal.toFixed(2)}`, 14, afterInsurance + 8);
+      nextY = afterInsurance + 18;
+    }
+
+    // --- Venmo Payments Table ---
+    const venmoToExport = selectedVenmoPayments.size > 0
+      ? sortedVenmoPayments.filter(p => selectedVenmoPayments.has(p.id))
+      : sortedVenmoPayments;
+
+    if (venmoToExport.length > 0) {
+      // Add new page if not enough space
+      if (nextY > doc.internal.pageSize.getHeight() - 60) {
+        doc.addPage();
+        nextY = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.text('Venmo Payments', 14, nextY);
+      nextY += 5;
+
+      const venmoData = venmoToExport.map(p => [
+        p.date || '-',
+        `$${p.amount.toFixed(2)}`,
+        p.notes || '-',
+      ]);
+
+      autoTable(doc, {
+        head: [['Date', 'Amount', 'Notes']],
+        body: venmoData,
+        startY: nextY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [34, 197, 94], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 250, 245] },
+      });
+
+      const venmoExportTotal = venmoToExport.reduce((sum, p) => sum + p.amount, 0);
+      const afterVenmo = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY || nextY + 20;
+      doc.setFontSize(10);
+      doc.text(`Venmo Payments: ${venmoToExport.length}   |   Subtotal: $${venmoExportTotal.toFixed(2)}`, 14, afterVenmo + 8);
+    }
+
+    const fileName = `${patientInfo.name.replace(/\s+/g, '_')}_all_payments_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   };
 
@@ -449,6 +606,18 @@ export default function PatientDetailsPage() {
   const isAllSelected = sortedInsurancePayments.length > 0 && selectedPayments.size === sortedInsurancePayments.length;
   const isSomeSelected = selectedPayments.size > 0 && selectedPayments.size < sortedInsurancePayments.length;
 
+  const toggleVenmoSelection = (paymentId: string) => {
+    setSelectedVenmoPayments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(paymentId)) {
+        newSet.delete(paymentId);
+      } else {
+        newSet.add(paymentId);
+      }
+      return newSet;
+    });
+  };
+
   // Apply sorting to venmo payments
   const sortedVenmoPayments = [...venmoPayments].sort((a, b) => {
     if (!venmoSortField || !venmoSortDirection) return 0;
@@ -484,6 +653,17 @@ export default function PatientDetailsPage() {
     (insuranceCurrentPage - 1) * insurancePageSize,
     insuranceCurrentPage * insurancePageSize
   );
+
+  const toggleVenmoSelectAll = () => {
+    if (selectedVenmoPayments.size === sortedVenmoPayments.length) {
+      setSelectedVenmoPayments(new Set());
+    } else {
+      setSelectedVenmoPayments(new Set(sortedVenmoPayments.map(p => p.id)));
+    }
+  };
+
+  const isAllVenmoSelected = sortedVenmoPayments.length > 0 && selectedVenmoPayments.size === sortedVenmoPayments.length;
+  const isSomeVenmoSelected = selectedVenmoPayments.size > 0 && selectedVenmoPayments.size < sortedVenmoPayments.length;
 
   const venmoTotalPages = Math.ceil(sortedVenmoPayments.length / venmoPageSize);
   const paginatedVenmoPayments = sortedVenmoPayments.slice(
@@ -620,7 +800,14 @@ export default function PatientDetailsPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">{patientInfo.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400">Member ID: {patientInfo.memberID}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">Member ID: {patientInfo.memberID}</p>
+              <button
+                onClick={exportAllToPDF}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                <Download className="w-4 h-4" />
+                Export All PDF
+              </button>
               {insurancePayments[0]?.payeeAddress && (
                 <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                   {insurancePayments[0].payeeAddress.split(',').map((part, index) => (
@@ -856,7 +1043,7 @@ export default function PatientDetailsPage() {
                         </td>
                       )}
                       {isColumnVisible('paymentDate') && (
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.paymentDate || '-'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{normalizeDate(payment.paymentDate || '') || '-'}</td>
                       )}
                       {isColumnVisible('checkNumber') && (
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.checkNumber || '-'}</td>
@@ -991,6 +1178,18 @@ export default function PatientDetailsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                      <input
+                        type="checkbox"
+                        checked={isAllVenmoSelected}
+                        ref={el => {
+                          if (el) el.indeterminate = isSomeVenmoSelected;
+                        }}
+                        onChange={toggleVenmoSelectAll}
+                        className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                        title={isAllVenmoSelected ? 'Deselect all' : 'Select all'}
+                      />
+                    </th>
                     <VenmoSortableHeader field="date">Date</VenmoSortableHeader>
                     <VenmoSortableHeader field="amount">Amount</VenmoSortableHeader>
                     <VenmoSortableHeader field="notes">Notes</VenmoSortableHeader>
@@ -999,7 +1198,15 @@ export default function PatientDetailsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {paginatedVenmoPayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <tr key={payment.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${selectedVenmoPayments.has(payment.id) ? 'bg-green-50' : ''}`}>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedVenmoPayments.has(payment.id)}
+                          onChange={() => toggleVenmoSelection(payment.id)}
+                          className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{payment.date}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                         ${payment.amount.toFixed(2)}
@@ -1016,7 +1223,7 @@ export default function PatientDetailsPage() {
                   ))}
                   {paginatedVenmoPayments.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         No Venmo payments recorded
                       </td>
                     </tr>
@@ -1026,13 +1233,30 @@ export default function PatientDetailsPage() {
             </div>
             <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {sortedVenmoPayments.length > 0
-                    ? `Showing ${((venmoCurrentPage - 1) * venmoPageSize) + 1}-${Math.min(venmoCurrentPage * venmoPageSize, sortedVenmoPayments.length)} of ${sortedVenmoPayments.length}`
-                    : `${venmoPayments.length} payment${venmoPayments.length !== 1 ? 's' : ''}`
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedVenmoPayments.size > 0 ? (
+                      <>
+                        {selectedVenmoPayments.size} selected
+                        <button
+                          onClick={() => setSelectedVenmoPayments(new Set())}
+                          className="ml-2 text-green-600 hover:text-green-800 underline"
+                        >
+                          Clear selection
+                        </button>
+                      </>
+                    ) : sortedVenmoPayments.length > 0
+                      ? `Showing ${((venmoCurrentPage - 1) * venmoPageSize) + 1}-${Math.min(venmoCurrentPage * venmoPageSize, sortedVenmoPayments.length)} of ${sortedVenmoPayments.length}`
+                      : `${venmoPayments.length} payment${venmoPayments.length !== 1 ? 's' : ''}`
+                    }
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-green-600">
+                  {selectedVenmoPayments.size > 0
+                    ? `Selected Total: $${sortedVenmoPayments.filter(p => selectedVenmoPayments.has(p.id)).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}`
+                    : `Total: $${totalVenmo.toFixed(2)}`
                   }
                 </span>
-                <span className="text-sm font-semibold text-green-600">Total: ${totalVenmo.toFixed(2)}</span>
               </div>
               {/* Pagination Controls */}
               {sortedVenmoPayments.length > 10 && (
